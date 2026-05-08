@@ -65,10 +65,17 @@ async function writeNodeResponse(webResponse, nodeResponse) {
 
 const server = createServer(async (req, res) => {
   const requestUrl = `http://localhost:${port}${req.url || "/"}`;
-  const request = new Request(requestUrl, {
+  const requestInit = {
     method: req.method,
     headers: req.headers,
-  });
+  };
+
+  if (req.method && !["GET", "HEAD"].includes(req.method.toUpperCase())) {
+    requestInit.body = req;
+    requestInit.duplex = "half";
+  }
+
+  const request = new Request(requestUrl, requestInit);
 
   const response = await routeRequest(request, {
     env,

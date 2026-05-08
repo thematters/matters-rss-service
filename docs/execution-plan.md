@@ -2,7 +2,7 @@
 
 Date: 2026-05-08
 Owner: Matters product/engineering
-Status: Local MVP implemented with WebSub follow-up code
+Status: Local MVP implemented with Cloudflare Free-tier WebSub path
 
 ## Goal
 
@@ -15,7 +15,8 @@ Phase 1 ships:
 - public author RSS feeds at `https://rss.matters.town/@{userName}.xml`
 - a standalone service page that helps readers follow authors without learning RSS first
 - recent public active articles only
-- no database, no object storage, no paid worker plan requirement
+- Cloudflare Worker + D1 on the free tier for WebSub subscriber state
+- no object storage or paid worker plan requirement
 - no changes to `matters-web` navigation or profile pages
 
 Out of scope for Phase 1:
@@ -64,12 +65,12 @@ Use:
 
 - static HTML/CSS/JS for the service page
 - vendored `thematters/design-system` tokens and Button CSS
-- Cloudflare Pages Functions for dynamic RSS and preview JSON
+- Cloudflare Worker for static assets, dynamic RSS, preview JSON, WebSub hub, and cron polling
+- Cloudflare D1 free tier for WebSub subscriber registrations and delivery guardrails
 - existing public GraphQL endpoint `https://server.matters.town/graphql`
 
 Avoid:
 
-- new DB tables
 - R2/KV storage
 - paid queues/workers
 - IPFS/IPNS republish jobs
@@ -79,7 +80,7 @@ Avoid:
 
 Expected fixed monthly cost: `$0`.
 
-The MVP uses Cloudflare Pages static hosting plus Pages Functions within free-tier constraints. RSS responses include edge-cache headers so feed-reader polling should be absorbed by CDN where possible.
+The MVP uses Cloudflare Worker static assets, Cron Triggers, and D1 within free-tier constraints. RSS responses include edge-cache headers so feed-reader polling should be absorbed by CDN where possible.
 
 Recommended headers:
 
@@ -90,7 +91,7 @@ If usage exceeds the free tier, treat that as the product signal for native inte
 
 ## WebSub Free-Tier Work Item
 
-WebSub is now a formal follow-up work item, implemented on Cloudflare Free tier first.
+WebSub is now a formal work item, implemented on Cloudflare Free tier first.
 
 Goal:
 
@@ -101,7 +102,7 @@ Goal:
 Free-tier architecture:
 
 - Cloudflare Worker endpoint for WebSub hub requests
-- D1 or KV for subscriber registrations, using only free-tier storage and operations
+- D1 for subscriber registrations, using only free-tier storage and operations
 - direct low-volume outbound delivery first; Cloudflare Queue can be added later if fan-out grows
 - Cron Trigger for polling authors with active subscriptions until Matters has a native article-published event
 - hard daily caps so WebSub delivery pauses instead of creating paid usage
@@ -160,12 +161,12 @@ Current UX decision:
 7. Add username validation and safe failure states.
 8. Add local smoke tests for XML, preview JSON, headers, 404, and invalid input.
 9. Validate with `@hi176` as the first known account.
-10. Add WebSub Free-tier implementation after the RSS page is accepted.
+10. Add WebSub Free-tier implementation behind the advanced section of the page.
 11. Keep Email follow as a reader-owned flow unless Matters approves first-party email subscriptions.
 
 ## Deployment Plan
 
-1. Deploy the standalone service to Cloudflare Pages.
+1. Deploy the standalone service to Cloudflare Worker.
 2. Bind `rss.matters.town` only after the preview deployment passes.
 3. Share the service with the original requester and a small author group.
 4. Observe request volume and user feedback.
@@ -196,7 +197,7 @@ MVP acceptance requires:
 - invalid usernames return `400`
 - unknown users return `404`
 - `noindex` articles are excluded
-- no paid storage or database service is required
+- no paid storage or database service is required; D1 must remain within free-tier guardrails
 - service page works on desktop and mobile
 
 Current local verification on 2026-05-08:

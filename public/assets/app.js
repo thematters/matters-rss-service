@@ -12,8 +12,6 @@ const copyButton = document.querySelector("#copy-button");
 const preview = document.querySelector("#preview");
 const previewAuthor = document.querySelector("#preview-author");
 const articleList = document.querySelector("#article-list");
-const webSubPill = document.querySelector("#websub-pill");
-const webSubState = document.querySelector("#websub-state");
 const webSubTopic = document.querySelector("#websub-topic");
 const webSubHub = document.querySelector("#websub-hub");
 
@@ -26,6 +24,28 @@ function setStatus(message, tone = "") {
   } else {
     delete statusMessage.dataset.tone;
   }
+}
+
+function friendlyErrorMessage(error) {
+  const message = error instanceof Error ? error.message : String(error || "");
+  if (message === "Matters author not found.") {
+    return "找不到這位 Matters 作者，請確認帳號是否正確。";
+  }
+  if (message.startsWith("Matters API returned") || message === "Matters API error.") {
+    return "暫時無法連上 Matters，請稍後再試。";
+  }
+  return message || "發生未知錯誤，請稍後再試。";
+}
+
+function selectFeedUrlText() {
+  const selection = window.getSelection();
+  if (!selection) {
+    return;
+  }
+  const range = document.createRange();
+  range.selectNodeContents(feedUrl);
+  selection.removeAllRanges();
+  selection.addRange(range);
 }
 
 function normalizeUserName(rawValue) {
@@ -169,6 +189,7 @@ async function loadPreview(userName) {
     throw new Error(payload.error || "讀取作者公開文章失敗。");
   }
   renderPreview(payload);
+  return payload;
 }
 
 async function loadWebSubStatus(userName) {
@@ -181,23 +202,12 @@ async function loadWebSubStatus(userName) {
   const status = await response.json();
   webSubTopic.textContent = status.topic || "-";
   webSubHub.textContent = status.hubUrl || "-";
-
-  if (status.enabled && !status.usage?.pausedForToday) {
-    webSubPill.textContent = "近即時通知可用";
-    webSubState.textContent = "已啟用";
-    delete webSubPill.dataset.tone;
-    delete webSubState.dataset.tone;
-  } else {
-    webSubPill.textContent = "今日用量已滿時會自動降級";
-    webSubState.textContent = "保留 RSS";
-    webSubPill.dataset.tone = "paused";
-    webSubState.dataset.tone = "paused";
-  }
 }
 
 async function handleSubmit(event) {
   event.preventDefault();
   clearPreview();
+  result.hidden = true;
 
   let userName;
   try {
@@ -209,34 +219,32 @@ async function handleSubmit(event) {
     return;
   }
 
-  const url = feedUrlFor(userName);
-  resultTitle.textContent = `把 @${userName} 加入你的資訊流`;
-  feedUrl.href = url;
-  feedUrl.textContent = url;
-  openFeed.href = url;
-  feedlyLink.href = feedlyUrlFor(url);
-  inoreaderLink.href = inoreaderUrlFor(url);
-  emailLink.href = emailUrlFor(url);
-  webSubTopic.textContent = url;
-  webSubHub.textContent = "偵測中";
-  webSubPill.textContent = "自動更新偵測中";
-  webSubState.textContent = "偵測中";
-  result.hidden = false;
-
   setStatus("正在確認作者公開文章...");
 
   try {
-    await loadPreview(userName);
+    const payload = await loadPreview(userName);
+    const canonicalUserName = payload.user.userName || userName;
+    const url = feedUrlFor(canonicalUserName);
+
+    resultTitle.textContent = `把 @${canonicalUserName} 加入你的資訊流`;
+    feedUrl.href = url;
+    feedUrl.textContent = url;
+    openFeed.href = url;
+    feedlyLink.href = feedlyUrlFor(url);
+    inoreaderLink.href = inoreaderUrlFor(url);
+    emailLink.href = emailUrlFor(url);
+    webSubTopic.textContent = url;
+    webSubHub.textContent = "確認中";
+    result.hidden = false;
+
     loadWebSubStatus(userName).catch(() => {
-      webSubPill.textContent = "RSS 穩定可用";
-      webSubState.textContent = "稍後重試";
       webSubHub.textContent = "暫時無法確認";
-      webSubPill.dataset.tone = "paused";
-      webSubState.dataset.tone = "paused";
     });
     setStatus("訂閱連結已建立。", "success");
   } catch (error) {
-    setStatus(error.message, "error");
+    result.hidden = true;
+    clearPreview();
+    setStatus(friendlyErrorMessage(error), "error");
   }
 }
 
@@ -250,7 +258,22 @@ async function copyFeedUrl() {
     await navigator.clipboard.writeText(url);
     setStatus("訂閱連結已複製。", "success");
   } catch {
-    setStatus("瀏覽器無法直接複製，請手動選取連結。", "error");
+    const fallbackInput = document.createElement("textarea");
+    fallbackInput.value = url;
+    fallbackInput.setAttribute("readonly", "");
+    fallbackInput.style.position = "fixed";
+    fallbackInput.style.inset = "0 auto auto 0";
+    fallbackInput.style.opacity = "0";
+    document.body.append(fallbackInput);
+    fallbackInput.select();
+    const copied = document.execCommand("copy");
+    fallbackInput.remove();
+    if (copied) {
+      setStatus("訂閱連結已複製。", "success");
+    } else {
+      selectFeedUrlText();
+      setStatus("已幫你選取訂閱連結，請按 Cmd 或 Ctrl + C 複製。");
+    }
   }
 }
 

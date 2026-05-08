@@ -11,12 +11,18 @@
     <script type="module" src="/assets/app.js"></script>
   </head>
   <body>
-    <header class="topbar" aria-label="Matters RSS">
-      <a class="brand" href="/" aria-label="Matters RSS 首頁">
-        <img class="brand__mark" src="/assets/matters-ds/brand/matters-mark-color.svg" alt="" />
-        <span class="brand__text">Matters 訂閱</span>
-      </a>
-      <a class="topbar__link" href="https://matters.town" rel="noreferrer">回到 Matters</a>
+    <header class="site-header" aria-label="Matters 訂閱">
+      <div class="wrap">
+        <a class="brand" href="/" aria-label="Matters 訂閱首頁">
+          <img class="brand-wordmark" src="/assets/matters-wordmark.svg" alt="Matters" />
+          <span class="brand-divider" aria-hidden="true">·</span>
+          <span class="brand-mark" aria-hidden="true">📡</span>
+          <span class="brand-name"><strong>訂閱</strong></span>
+        </a>
+        <nav class="nav" aria-label="外部連結">
+          <a class="cta" href="https://matters.town" rel="noreferrer">回到 Matters →</a>
+        </nav>
+      </div>
     </header>
 
     <main class="page">
@@ -35,11 +41,7 @@
           <label class="field" for="author-input">
             <span class="field__label">你想追蹤的作者</span>
             <span class="field__control">
-              <span class="field__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0-2a3 3 0 1 1 3-3 3 3 0 0 1-3 3Zm8 11a1 1 0 0 0 1-1 7 7 0 0 0-14 0 1 1 0 1 0 2 0 5 5 0 0 1 10 0 1 1 0 0 0 1 1Z" />
-                </svg>
-              </span>
+              <span class="field__icon" aria-hidden="true">@</span>
               <input
                 id="author-input"
                 name="author"
@@ -52,11 +54,7 @@
             </span>
           </label>
           <button class="ds-btn ds-btn--primary ds-btn--large tool__submit" type="submit">
-            <span class="ds-btn__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <path d="M12 4a1 1 0 0 1 1 1v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V5a1 1 0 0 1 1-1Z" />
-              </svg>
-            </span>
+            <span class="btn-symbol" aria-hidden="true">＋</span>
             建立訂閱連結
           </button>
         </form>
@@ -71,7 +69,6 @@
               <span class="result__label">已建立</span>
               <h2 class="result__title" id="result-title">把這位作者加入你的資訊流</h2>
             </div>
-            <span class="status-pill" id="websub-pill">自動更新可用</span>
           </div>
 
           <div class="url-row">
@@ -80,73 +77,40 @@
               <a class="result__url" id="feed-url" href="#" target="_blank" rel="noreferrer"></a>
             </div>
             <button class="ds-btn ds-btn--secondary ds-btn--medium" id="copy-button" type="button">
-              <span class="ds-btn__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M8 7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3h-1v1a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-6a3 3 0 0 1 3-3h1V7Zm2 1h3a3 3 0 0 1 3 3v3h1a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v1Zm-3 2a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1H7Z" />
-                </svg>
-              </span>
+              <span class="btn-symbol" aria-hidden="true">⧉</span>
               複製
             </button>
           </div>
 
           <div class="result__actions" aria-label="訂閱方式">
             <a class="ds-btn ds-btn--tertiary ds-btn--medium" id="feedly-link" href="#" target="_blank" rel="noreferrer">
-              <span class="ds-btn__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M5 5.5a13.5 13.5 0 0 1 13.5 13.5h-3A10.5 10.5 0 0 0 5 8.5v-3Z" />
-                  <path d="M5 11a8 8 0 0 1 8 8h-3a5 5 0 0 0-5-5v-3Z" />
-                  <path d="M8 18.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                </svg>
-              </span>
+              <span class="btn-symbol btn-symbol--word" aria-hidden="true">RSS</span>
               Feedly
             </a>
             <a class="ds-btn ds-btn--tertiary ds-btn--medium" id="inoreader-link" href="#" target="_blank" rel="noreferrer">
-              <span class="ds-btn__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M4 5a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v14a1 1 0 0 1-1.45.89L12 16.62l-6.55 3.27A1 1 0 0 1 4 19V5Zm3-1a1 1 0 0 0-1 1v12.38l5.55-2.77a1 1 0 0 1 .9 0L18 17.38V5a1 1 0 0 0-1-1H7Z" />
-                </svg>
-              </span>
+              <span class="btn-symbol" aria-hidden="true">I</span>
               Inoreader
             </a>
             <a class="ds-btn ds-btn--tertiary ds-btn--medium" id="email-link" href="#">
-              <span class="ds-btn__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M4 5h16a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3Zm0 2a1 1 0 0 0-1 1v.22l9 5.4 9-5.4V8a1 1 0 0 0-1-1H4Zm17 3.55-8.49 5.1a1 1 0 0 1-1.02 0L3 10.55V16a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-5.45Z" />
-                </svg>
-              </span>
+              <span class="btn-symbol" aria-hidden="true">@</span>
               Email
             </a>
             <a class="ds-btn ds-btn--tertiary ds-btn--medium" id="open-feed" href="#" target="_blank" rel="noreferrer">
-              <span class="ds-btn__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M14 5a1 1 0 1 1 0-2h6a1 1 0 0 1 1 1v6a1 1 0 1 1-2 0V6.4l-7.3 7.3a1 1 0 0 1-1.4-1.4L17.6 5H14Z" />
-                  <path d="M5 6a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5a1 1 0 1 1 2 0v5a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h5a1 1 0 1 1 0 2H5Z" />
-                </svg>
-              </span>
+              <span class="btn-symbol" aria-hidden="true">↗</span>
               原始 RSS
             </a>
           </div>
 
           <div class="follow-options" aria-label="訂閱方式">
             <div class="follow-option">
-              <span class="follow-option__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M5 5.5a13.5 13.5 0 0 1 13.5 13.5h-3A10.5 10.5 0 0 0 5 8.5v-3Z" />
-                  <path d="M5 11a8 8 0 0 1 8 8h-3a5 5 0 0 0-5-5v-3Z" />
-                  <path d="M8 18.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                </svg>
-              </span>
+              <span class="follow-option__icon" aria-hidden="true">讀</span>
               <div class="follow-option__body">
                 <h2 class="follow-option__title">安靜閱讀新文章</h2>
                 <p>用 Feedly、Inoreader、NewsBlur、NetNewsWire 或 Reeder 追蹤作者。</p>
               </div>
             </div>
             <div class="follow-option">
-              <span class="follow-option__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M4 5h16a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3Zm0 2a1 1 0 0 0-1 1v.22l9 5.4 9-5.4V8a1 1 0 0 0-1-1H4Zm17 3.55-8.49 5.1a1 1 0 0 1-1.02 0L3 10.55V16a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-5.45Z" />
-                </svg>
-              </span>
+              <span class="follow-option__icon" aria-hidden="true">信</span>
               <div class="follow-option__body">
                 <h2 class="follow-option__title">用 Email 收更新</h2>
                 <p>
@@ -159,11 +123,7 @@
               </div>
             </div>
             <div class="follow-option">
-              <span class="follow-option__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <path d="M21.58 4.18a1.5 1.5 0 0 0-1.54-.23L3.87 10.22a1.5 1.5 0 0 0 .1 2.83l3.91 1.2 1.42 4.55a1.5 1.5 0 0 0 2.55.61l2.1-2.11 3.83 2.84a1.5 1.5 0 0 0 2.37-.93l2-13.55a1.5 1.5 0 0 0-.57-1.48ZM18.4 17.7l-3.75-2.78a1.5 1.5 0 0 0-1.95.13l-1.78 1.8-.8-2.55 6.04-5.55a1 1 0 0 0-1.19-1.59l-6.58 4.86-2.15-.66 13.74-5.32-1.58 11.66Z" />
-                </svg>
-              </span>
+              <span class="follow-option__icon" aria-hidden="true">接</span>
               <div class="follow-option__body">
                 <h2 class="follow-option__title">丟到 Telegram 或自動化流程</h2>
                 <p>
@@ -177,12 +137,20 @@
 
           <details class="advanced" id="advanced-websub">
             <summary>
-              <span>進階：讓支援 WebSub 的工具更快收到更新</span>
-              <span class="advanced__badge" id="websub-state">偵測中</span>
+              <span>進階：WebSub 自動通知</span>
             </summary>
-            <p>
-              大多數人不用設定這一段。支援 WebSub 的閱讀器或自動化工具會自己發現 hub，作者更新時就能更快收到通知。
-            </p>
+            <div class="lesson-box">
+              <span class="lesson-box__icon" aria-hidden="true">小</span>
+              <div>
+                <h3>WebSub 是什麼？</h3>
+                <p>
+                  可以把它想成 RSS 的「按門鈴」。一般 RSS 是閱讀器定期回來看；支援 WebSub 的工具會收到更新提醒，所以不用一直猜什麼時候有新文章。
+                </p>
+                <p class="microcopy">
+                  你不需要手動設定。工具支援時會自己使用；不支援時，這條 RSS 連結照樣可以訂閱。
+                </p>
+              </div>
+            </div>
             <dl class="advanced__meta">
               <div>
                 <dt>Topic</dt>
