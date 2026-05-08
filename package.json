@@ -1,0 +1,12 @@
+{
+  "name": "matters-rss-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Standalone public RSS service for Matters authors.",
+  "scripts": {
+    "dev": "node scripts/dev-server.mjs",
+    "smoke": "node scripts/smoke-test.mjs"
+  }
+}
+
