@@ -3,8 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex" />
-    <title>Matters RSS</title>
+    <title>Matters 訂閱</title>
     <link rel="stylesheet" href="/assets/matters-ds/tokens/tokens.css" />
     <link rel="stylesheet" href="/assets/matters-ds/components/button.css" />
     <link rel="stylesheet" href="/assets/app.css" />
@@ -103,14 +102,14 @@
 
           <div class="follow-options" aria-label="訂閱方式">
             <div class="follow-option">
-              <span class="follow-option__icon" aria-hidden="true">讀</span>
+              <span class="follow-option__icon" aria-hidden="true">📖</span>
               <div class="follow-option__body">
                 <h2 class="follow-option__title">安靜閱讀新文章</h2>
                 <p>用 Feedly、Inoreader、NewsBlur、NetNewsWire 或 Reeder 追蹤作者。</p>
               </div>
             </div>
             <div class="follow-option">
-              <span class="follow-option__icon" aria-hidden="true">信</span>
+              <span class="follow-option__icon" aria-hidden="true">✉️</span>
               <div class="follow-option__body">
                 <h2 class="follow-option__title">用 Email 收更新</h2>
                 <p>
@@ -123,7 +122,7 @@
               </div>
             </div>
             <div class="follow-option">
-              <span class="follow-option__icon" aria-hidden="true">接</span>
+              <span class="follow-option__icon" aria-hidden="true">🔗</span>
               <div class="follow-option__body">
                 <h2 class="follow-option__title">丟到 Telegram 或自動化流程</h2>
                 <p>
@@ -138,9 +137,14 @@
           <details class="advanced" id="advanced-websub">
             <summary>
               <span>進階：WebSub 自動通知</span>
+              <span class="advanced__toggle" aria-hidden="true">
+                <span class="advanced__toggle-closed">展開</span>
+                <span class="advanced__toggle-open">收合</span>
+                <span class="advanced__toggle-icon">⌄</span>
+              </span>
             </summary>
             <div class="lesson-box">
-              <span class="lesson-box__icon" aria-hidden="true">小</span>
+              <span class="lesson-box__icon" aria-hidden="true">💡</span>
               <div>
                 <h3>WebSub 是什麼？</h3>
                 <p>
@@ -148,6 +152,7 @@
                 </p>
                 <p class="microcopy">
                   你不需要手動設定。工具支援時會自己使用；不支援時，這條 RSS 連結照樣可以訂閱。
+                  <a href="https://www.w3.org/TR/websub/" target="_blank" rel="noreferrer">查看 WebSub 標準</a>
                 </p>
               </div>
             </div>

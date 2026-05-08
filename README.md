@@ -2,6 +2,8 @@
 
 Standalone MVP for public Matters author RSS feeds.
 
+Live service: `https://rss.matters.town/`
+
 ## What it does
 
 - Serves public author feeds at `/@{userName}.xml`
@@ -54,7 +56,7 @@ For public launch, prefer the Worker shape because WebSub needs Cron Triggers:
 - `migrations/0001_websub.sql` defines the D1 schema.
 - `wrangler.example.jsonc` documents the route, assets binding, D1 binding, and cron schedule.
 
-The intended production hostname is `rss.matters.town`, but the MVP should be tested on a preview deployment first.
+The production hostname is `rss.matters.town`.
 
 ## Design System
 

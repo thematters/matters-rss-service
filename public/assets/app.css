@@ -382,8 +382,8 @@ input::placeholder {
   border-radius: 999px;
   background: var(--c-primary-0);
   color: var(--c-primary-700);
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 400;
   line-height: 1;
 }
 
@@ -438,6 +438,42 @@ input::placeholder {
   display: none;
 }
 
+.advanced__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sp4, 4px);
+  min-width: 64px;
+  padding: 5px 10px;
+  border-radius: var(--r-sm);
+  background: var(--c-primary-0);
+  color: var(--c-primary-700);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.advanced__toggle-open {
+  display: none;
+}
+
+.advanced[open] .advanced__toggle-closed {
+  display: none;
+}
+
+.advanced[open] .advanced__toggle-open {
+  display: inline;
+}
+
+.advanced__toggle-icon {
+  line-height: 1;
+  transition: transform 120ms ease;
+}
+
+.advanced[open] .advanced__toggle-icon {
+  transform: rotate(180deg);
+}
+
 .lesson-box {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr);
@@ -458,8 +494,9 @@ input::placeholder {
   border-radius: 999px;
   background: var(--c-white);
   color: var(--c-primary-700);
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1;
 }
 
 .lesson-box h3 {
@@ -474,6 +511,13 @@ input::placeholder {
   margin-top: var(--space-sp8, 8px);
   font-size: 13px;
   line-height: 20px;
+}
+
+.lesson-box a {
+  color: var(--c-primary-700);
+  font-weight: 600;
+  text-decoration-color: var(--color-primary-300, var(--c-primary-100));
+  text-underline-offset: 3px;
 }
 
 .advanced__meta {
@@ -631,9 +675,12 @@ input::placeholder {
   }
 
   .result__header,
-  .preview__header,
-  .advanced summary {
+  .preview__header {
     display: grid;
+    gap: var(--space-sp8);
+  }
+
+  .advanced summary {
     gap: var(--space-sp8);
   }
 

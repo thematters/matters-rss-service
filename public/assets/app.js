@@ -16,6 +16,8 @@ const webSubTopic = document.querySelector("#websub-topic");
 const webSubHub = document.querySelector("#websub-hub");
 
 const USERNAME_RE = /^[A-Za-z0-9_-]{1,64}$/;
+const PUBLIC_FEED_ORIGIN = "https://rss.matters.town";
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
 function setStatus(message, tone = "") {
   statusMessage.textContent = message;
@@ -84,8 +86,27 @@ function normalizeUserName(rawValue) {
   return value;
 }
 
+function feedOrigin() {
+  return LOCAL_HOSTS.has(window.location.hostname) ? PUBLIC_FEED_ORIGIN : window.location.origin;
+}
+
 function feedUrlFor(userName) {
-  return `${window.location.origin}/@${encodeURIComponent(userName)}.xml`;
+  return `${feedOrigin()}/@${encodeURIComponent(userName)}.xml`;
+}
+
+function publicServiceUrl(url) {
+  if (!LOCAL_HOSTS.has(window.location.hostname)) {
+    return url;
+  }
+  try {
+    const parsed = new URL(url);
+    if (parsed.origin === window.location.origin) {
+      return `${feedOrigin()}${parsed.pathname}${parsed.search}`;
+    }
+  } catch {
+    return url;
+  }
+  return url;
 }
 
 function feedlyUrlFor(url) {
@@ -200,8 +221,8 @@ async function loadWebSubStatus(userName) {
     throw new Error("WebSub 狀態暫時無法確認。");
   }
   const status = await response.json();
-  webSubTopic.textContent = status.topic || "-";
-  webSubHub.textContent = status.hubUrl || "-";
+  webSubTopic.textContent = status.topic ? publicServiceUrl(status.topic) : "-";
+  webSubHub.textContent = status.hubUrl ? publicServiceUrl(status.hubUrl) : "-";
 }
 
 async function handleSubmit(event) {
