@@ -109,8 +109,8 @@ function publicServiceUrl(url) {
   return url;
 }
 
-function feedlyUrlFor(url) {
-  return `https://feedly.com/i/subscription/${encodeURIComponent(`feed/${url}`)}`;
+function feedlyUrlFor() {
+  return "https://feedly.com/i/discover";
 }
 
 function inoreaderUrlFor(url) {
@@ -251,7 +251,8 @@ async function handleSubmit(event) {
     feedUrl.href = url;
     feedUrl.textContent = url;
     openFeed.href = url;
-    feedlyLink.href = feedlyUrlFor(url);
+    feedlyLink.href = feedlyUrlFor();
+    feedlyLink.setAttribute("aria-label", "複製 RSS 連結並開啟 Feedly");
     inoreaderLink.href = inoreaderUrlFor(url);
     emailLink.href = emailUrlFor(url);
     webSubTopic.textContent = url;
@@ -269,18 +270,21 @@ async function handleSubmit(event) {
   }
 }
 
-async function copyFeedUrl() {
-  const url = feedUrl.href;
-  if (!url || url === "#") {
-    return;
+async function copyText(text, successMessage = "訂閱連結已複製。") {
+  if (!text || text === "#") {
+    return false;
   }
 
   try {
-    await navigator.clipboard.writeText(url);
-    setStatus("訂閱連結已複製。", "success");
+    if (!navigator.clipboard?.writeText) {
+      throw new Error("Clipboard API unavailable.");
+    }
+    await navigator.clipboard.writeText(text);
+    setStatus(successMessage, "success");
+    return true;
   } catch {
     const fallbackInput = document.createElement("textarea");
-    fallbackInput.value = url;
+    fallbackInput.value = text;
     fallbackInput.setAttribute("readonly", "");
     fallbackInput.style.position = "fixed";
     fallbackInput.style.inset = "0 auto auto 0";
@@ -290,12 +294,27 @@ async function copyFeedUrl() {
     const copied = document.execCommand("copy");
     fallbackInput.remove();
     if (copied) {
-      setStatus("訂閱連結已複製。", "success");
-    } else {
-      selectFeedUrlText();
-      setStatus("已幫你選取訂閱連結，請按 Cmd 或 Ctrl + C 複製。");
+      setStatus(successMessage, "success");
+      return true;
     }
+
+    if (text === feedUrl.href) {
+      selectFeedUrlText();
+    }
+    setStatus("已幫你選取訂閱連結，請按 Cmd 或 Ctrl + C 複製。");
+    return false;
   }
+}
+
+function copyFeedUrl() {
+  copyText(feedUrl.href);
+}
+
+function openFeedly(event) {
+  event.preventDefault();
+  const url = feedUrl.href;
+  copyText(url, "RSS 連結已複製。Feedly 開啟後，請貼到搜尋欄。");
+  window.open(feedlyUrlFor(), "_blank", "noopener,noreferrer");
 }
 
 function hydrateFromQuery() {
@@ -309,4 +328,5 @@ function hydrateFromQuery() {
 
 form.addEventListener("submit", handleSubmit);
 copyButton.addEventListener("click", copyFeedUrl);
+feedlyLink.addEventListener("click", openFeedly);
 hydrateFromQuery();
