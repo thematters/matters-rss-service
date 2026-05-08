@@ -110,7 +110,7 @@ function publicServiceUrl(url) {
 }
 
 function feedlyUrlFor(url) {
-  return `https://feedly.com/i/subscription/feed/${encodeURIComponent(url)}`;
+  return `https://feedly.com/i/subscription/${encodeURIComponent(`feed/${url}`)}`;
 }
 
 function inoreaderUrlFor(url) {
