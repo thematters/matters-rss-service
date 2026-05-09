@@ -28,9 +28,9 @@
     <main class="page">
       <section class="tool" aria-label="作者訂閱連結產生器">
         <div class="tool__intro">
-          <p class="eyebrow">穩定追蹤作者</p>
+          <p class="eyebrow">最新文章不漏接</p>
           <h1 id="page-title" class="ds-text-system-h1-semibold">
-            追蹤這位作者，不靠演算法、不怕漏通知
+            透過 RSS 追蹤喜歡的作者
           </h1>
           <p class="intro__copy">
             建立一條公開訂閱連結。你可以放進閱讀器，也可以接到 Email、Telegram 或自動化工具。
@@ -85,7 +85,7 @@
           <div class="recommended-action" aria-label="推薦訂閱方式">
             <div class="recommended-action__copy">
               <span class="result__label">推薦方式</span>
-              <h3>用 Email 收作者更新</h3>
+              <h3>✉️ 用 Email 收作者更新</h3>
               <ul class="plain-list">
                 <li>按下後會開啟你的 Email app，草稿裡會放入 RSS 連結。</li>
                 <li>寄出後，RSS by email 會處理訂閱；Matters 不會直接寄 newsletter。</li>
@@ -101,8 +101,8 @@
 
           <div class="service-group" aria-label="RSS 閱讀器">
             <div>
-              <span class="result__label">次要方式</span>
-              <h3>放進 RSS 閱讀器</h3>
+              <span class="result__label">其他人也這樣做</span>
+              <h3>📖 放進 RSS 閱讀器</h3>
               <p>Feedly 需要登入後貼上連結；Inoreader 會開啟登入或加入頁。NewsBlur、NetNewsWire、Reeder 等閱讀器也可以直接貼上 RSS 連結。</p>
             </div>
             <div class="result__actions">
@@ -124,7 +124,7 @@
 
           <details class="advanced" id="advanced-tools">
             <summary>
-              <span>進階：其他服務與驗證</span>
+              <span>進階：其他服務、驗證與 WebSub</span>
               <span class="advanced__toggle" aria-hidden="true">
                 <span class="advanced__toggle-closed">展開</span>
                 <span class="advanced__toggle-open">收合</span>
@@ -153,21 +153,17 @@
                 <p class="microcopy">如果沒有正常開啟，請複製 RSS 連結，再手動貼到服務裡。</p>
               </div>
             </div>
-          </details>
-
-          <details class="advanced" id="advanced-websub">
-            <summary>
-              <span>進階：WebSub 自動通知</span>
-              <span class="advanced__toggle" aria-hidden="true">
-                <span class="advanced__toggle-closed">展開</span>
-                <span class="advanced__toggle-open">收合</span>
-                <span class="advanced__toggle-icon">⌄</span>
-              </span>
-            </summary>
+            <div class="lesson-box">
+              <span class="lesson-box__icon" aria-hidden="true">✓</span>
+              <div>
+                <h3>W3C 驗證是什麼？</h3>
+                <p>W3C 驗證會檢查這條 RSS 是否符合常見標準。通常一般讀者不用打開；如果閱讀器說格式錯誤，可以用它確認問題。</p>
+              </div>
+            </div>
             <div class="lesson-box">
               <span class="lesson-box__icon" aria-hidden="true">💡</span>
               <div>
-                <h3>WebSub 是什麼？</h3>
+                <h3>Matters RSS 支援 WebSub 自動通知標準</h3>
                 <p>
                   可以把它想成 RSS 的「按門鈴」。一般 RSS 是閱讀器定期回來看；支援 WebSub 的工具會收到更新提醒，所以不用一直猜什麼時候有新文章。
                 </p>
