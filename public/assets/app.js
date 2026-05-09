@@ -1,3 +1,16 @@
+import {
+  blogtrottrUrlFor,
+  displayFeedUrlFor,
+  encodedFeedUrlFor,
+  feedlyUrlFor,
+  feedOriginForLocation,
+  iftttTelegramUrlFor,
+  inoreaderUrlFor,
+  normalizeUserName,
+  rssByEmailMailtoUrlFor,
+  w3cValidatorUrlFor,
+} from "./subscription-urls.js";
+
 const form = document.querySelector("#feed-form");
 const input = document.querySelector("#author-input");
 const statusMessage = document.querySelector("#status-message");
@@ -8,16 +21,19 @@ const openFeed = document.querySelector("#open-feed");
 const feedlyLink = document.querySelector("#feedly-link");
 const inoreaderLink = document.querySelector("#inoreader-link");
 const emailLink = document.querySelector("#email-link");
+const blogtrottrLink = document.querySelector("#blogtrottr-link");
+const iftttTelegramLink = document.querySelector("#ifttt-telegram-link");
+const validatorLink = document.querySelector("#validator-link");
 const copyButton = document.querySelector("#copy-button");
+const copyButtonLabel = document.querySelector("#copy-button-label");
 const preview = document.querySelector("#preview");
 const previewAuthor = document.querySelector("#preview-author");
 const articleList = document.querySelector("#article-list");
 const webSubTopic = document.querySelector("#websub-topic");
 const webSubHub = document.querySelector("#websub-hub");
 
-const USERNAME_RE = /^[A-Za-z0-9_-]{1,64}$/;
-const PUBLIC_FEED_ORIGIN = "https://rss.matters.town";
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+let copyButtonResetTimer = 0;
 
 function setStatus(message, tone = "") {
   statusMessage.textContent = message;
@@ -50,48 +66,8 @@ function selectFeedUrlText() {
   selection.addRange(range);
 }
 
-function normalizeUserName(rawValue) {
-  let value = rawValue.trim();
-  if (!value) {
-    throw new Error("請輸入 Matters 作者帳號。");
-  }
-
-  if (/^https?:\/\//i.test(value)) {
-    let parsed;
-    try {
-      parsed = new URL(value);
-    } catch {
-      throw new Error("網址格式不正確。");
-    }
-    const segment = parsed.pathname
-      .split("/")
-      .filter(Boolean)
-      .find((part) => part.startsWith("@"));
-    if (!segment) {
-      throw new Error("個人頁網址需要包含 @username。");
-    }
-    value = segment;
-  }
-
-  value = value.replace(/^\/+/, "");
-  value = value.replace(/^rss\//, "");
-  value = value.replace(/^@/, "");
-  value = value.replace(/\.xml$/i, "");
-  value = value.replace(/\/+$/, "");
-
-  if (!USERNAME_RE.test(value)) {
-    throw new Error("作者帳號只能包含英文字母、數字、底線或連字號。");
-  }
-
-  return value;
-}
-
 function feedOrigin() {
-  return LOCAL_HOSTS.has(window.location.hostname) ? PUBLIC_FEED_ORIGIN : window.location.origin;
-}
-
-function feedUrlFor(userName) {
-  return `${feedOrigin()}/@${encodeURIComponent(userName)}.xml`;
+  return feedOriginForLocation(window.location);
 }
 
 function publicServiceUrl(url) {
@@ -107,26 +83,6 @@ function publicServiceUrl(url) {
     return url;
   }
   return url;
-}
-
-function feedlyUrlFor() {
-  return "https://feedly.com/i/discover";
-}
-
-function inoreaderUrlFor(url) {
-  return `https://www.inoreader.com/feed/${encodeURIComponent(url)}`;
-}
-
-function emailUrlFor(url) {
-  const subject = "訂閱 Matters 作者更新";
-  const body = [
-    "我想用 Email 收到這位 Matters 作者的新文章：",
-    "",
-    url,
-    "",
-    "如果你使用 RSS by email，可以把這封信寄到 add@rssby.email。",
-  ].join("\n");
-  return `mailto:add@rssby.email?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
 function formatDate(dateLike) {
@@ -168,7 +124,7 @@ function renderPreview(payload) {
     title.className = "article__title";
     title.href = article.url;
     title.target = "_blank";
-    title.rel = "noreferrer";
+    title.rel = "noopener noreferrer";
     title.textContent = article.title || "Untitled";
 
     const meta = document.createElement("div");
@@ -245,17 +201,22 @@ async function handleSubmit(event) {
   try {
     const payload = await loadPreview(userName);
     const canonicalUserName = payload.user.userName || userName;
-    const url = feedUrlFor(canonicalUserName);
+    const origin = feedOrigin();
+    const url = encodedFeedUrlFor(origin, canonicalUserName);
+    const displayUrl = displayFeedUrlFor(origin, canonicalUserName);
 
     resultTitle.textContent = `把 @${canonicalUserName} 加入你的資訊流`;
     feedUrl.href = url;
-    feedUrl.textContent = url;
+    feedUrl.textContent = displayUrl;
     openFeed.href = url;
     feedlyLink.href = feedlyUrlFor();
     feedlyLink.setAttribute("aria-label", "複製 RSS 連結並開啟 Feedly");
     inoreaderLink.href = inoreaderUrlFor(url);
-    emailLink.href = emailUrlFor(url);
-    webSubTopic.textContent = url;
+    emailLink.href = rssByEmailMailtoUrlFor(url);
+    blogtrottrLink.href = blogtrottrUrlFor();
+    iftttTelegramLink.href = iftttTelegramUrlFor();
+    validatorLink.href = w3cValidatorUrlFor(url);
+    webSubTopic.textContent = displayUrl;
     webSubHub.textContent = "確認中";
     result.hidden = false;
 
@@ -281,6 +242,7 @@ async function copyText(text, successMessage = "訂閱連結已複製。") {
     }
     await navigator.clipboard.writeText(text);
     setStatus(successMessage, "success");
+    showCopiedState();
     return true;
   } catch {
     const fallbackInput = document.createElement("textarea");
@@ -295,6 +257,7 @@ async function copyText(text, successMessage = "訂閱連結已複製。") {
     fallbackInput.remove();
     if (copied) {
       setStatus(successMessage, "success");
+      showCopiedState();
       return true;
     }
 
@@ -306,15 +269,26 @@ async function copyText(text, successMessage = "訂閱連結已複製。") {
   }
 }
 
+function showCopiedState() {
+  if (!copyButton || !copyButtonLabel) {
+    return;
+  }
+  window.clearTimeout(copyButtonResetTimer);
+  copyButton.dataset.copied = "true";
+  copyButtonLabel.textContent = "已複製";
+  copyButtonResetTimer = window.setTimeout(() => {
+    delete copyButton.dataset.copied;
+    copyButtonLabel.textContent = "複製 RSS 連結";
+  }, 2400);
+}
+
 function copyFeedUrl() {
   copyText(feedUrl.href);
 }
 
-function openFeedly(event) {
-  event.preventDefault();
+function openFeedly() {
   const url = feedUrl.href;
   copyText(url, "RSS 連結已複製。Feedly 開啟後，請貼到搜尋欄。");
-  window.open(feedlyUrlFor(), "_blank", "noopener,noreferrer");
 }
 
 function hydrateFromQuery() {

@@ -16,8 +16,8 @@ async function fetchWithCallbackVerification(url, init) {
   return fetch(url, init);
 }
 
-async function request(path) {
-  return routeRequest(new Request(`${origin}${path}`), {
+async function request(path, init = {}) {
+  return routeRequest(new Request(`${origin}${path}`, init), {
     env,
     storage,
     fetch: fetchWithCallbackVerification,
@@ -25,8 +25,8 @@ async function request(path) {
   });
 }
 
-async function text(path) {
-  const response = await request(path);
+async function text(path, init = {}) {
+  const response = await request(path, init);
   return {
     response,
     body: await response.text(),
@@ -43,13 +43,34 @@ async function json(path) {
 
 const rss = await text("/@hi176.xml");
 assert.equal(rss.response.status, 200);
-assert.match(rss.response.headers.get("content-type") || "", /application\/rss\+xml/);
+assert.match(rss.response.headers.get("content-type") || "", /application\/rss\+xml; charset=utf-8/);
 assert.match(rss.response.headers.get("cache-control") || "", /s-maxage=900/);
 assert.match(rss.response.headers.get("link") || "", /rel="hub"/);
 assert.match(rss.body, /<rss version="2.0"/);
 assert.match(rss.body, /<channel>/);
 assert.match(rss.body, /rel="hub"/);
 assert.match(rss.body, /https:\/\/matters\.town\/a\//);
+
+const encodedRss = await text("/%40hi176.xml");
+assert.equal(encodedRss.response.status, 200);
+assert.match(encodedRss.response.headers.get("content-type") || "", /application\/rss\+xml; charset=utf-8/);
+assert.match(encodedRss.response.headers.get("link") || "", /%40hi176\.xml/);
+assert.match(encodedRss.body, /<rss version="2.0"/);
+assert.match(encodedRss.body, /<channel>/);
+assert.match(encodedRss.body, /href="http:\/\/localhost\.test\/%40hi176\.xml" rel="self"/);
+
+const blogtrottrHead = await request("/@hi176.xml", {
+  method: "HEAD",
+  headers: { "user-agent": "Blogtrottr" },
+});
+assert.equal(blogtrottrHead.status, 200);
+assert.match(blogtrottrHead.headers.get("content-type") || "", /application\/rss\+xml; charset=utf-8/);
+
+const w3cValidatorGet = await text("/%40hi176.xml", {
+  headers: { "user-agent": "W3C_Validator" },
+});
+assert.equal(w3cValidatorGet.response.status, 200);
+assert.match(w3cValidatorGet.response.headers.get("content-type") || "", /application\/rss\+xml; charset=utf-8/);
 
 const preview = await json("/api/preview?user=hi176");
 assert.equal(preview.response.status, 200);

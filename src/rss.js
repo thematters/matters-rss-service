@@ -76,6 +76,7 @@ export function normalizeUserName(input) {
   value = value.replace(/^\/+/, "");
   value = value.replace(/^rss\//, "");
   value = value.replace(/^@/, "");
+  value = value.replace(/^%40/i, "");
   value = value.replace(/\.xml$/i, "");
   value = value.replace(/\/+$/, "");
 
@@ -92,6 +93,16 @@ export function feedPathFor(userName) {
 
 export function feedUrlFor(origin, userName) {
   return `${origin.replace(/\/+$/, "")}${feedPathFor(userName)}`;
+}
+
+function feedUrlFromRequest(requestUrl, userName) {
+  const url = new URL(requestUrl);
+  const decodedPathname = decodeURIComponent(url.pathname);
+  const expectedPathname = feedPathFor(userName);
+  if (decodedPathname === expectedPathname || decodedPathname === `/rss${expectedPathname}`) {
+    return `${url.origin}${url.pathname}`;
+  }
+  return feedUrlFor(url.origin, userName);
 }
 
 export async function fetchAuthor(userName, options = {}) {
@@ -189,7 +200,7 @@ function latestDate(articles) {
 export function buildRssXml({ user, articles }, options = {}) {
   const siteOrigin = options.siteOrigin || DEFAULT_SITE_ORIGIN;
   const feedOrigin = options.feedOrigin || options.origin || "";
-  const feedUrl = feedOrigin ? feedUrlFor(feedOrigin, user.userName) : "";
+  const feedUrl = options.feedUrl || (feedOrigin ? feedUrlFor(feedOrigin, user.userName) : "");
   const webSubHubUrl = options.webSubHubUrl || "";
   const authorUrl = `${siteOrigin}/@${encodeURIComponent(user.userName)}`;
   const channelTitle = `${user.displayName} (@${user.userName}) - Matters`;
@@ -265,16 +276,18 @@ export async function createRssResponse(userName, requestUrl, options = {}) {
     typeof options.webSubHubUrl === "function"
       ? options.webSubHubUrl(origin)
       : options.webSubHubUrl;
+  const feedUrl = options.feedUrl || feedUrlFromRequest(requestUrl, normalized);
   const data = await fetchAuthor(normalized, options);
   const xml = buildRssXml(data, {
     origin,
     feedOrigin: options.feedOrigin || origin,
+    feedUrl,
     siteOrigin: options.siteOrigin || DEFAULT_SITE_ORIGIN,
     webSubHubUrl,
   });
 
   const linkHeader = [
-    `<${feedUrlFor(options.feedOrigin || origin, normalized)}>; rel="self"; type="application/rss+xml"`,
+    `<${feedUrl}>; rel="self"; type="application/rss+xml"`,
     webSubHubUrl ? `<${webSubHubUrl}>; rel="hub"` : "",
   ].filter(Boolean).join(", ");
 
@@ -329,9 +342,10 @@ export function errorResponse(error) {
 
 export async function routeRequest(request, options = {}) {
   const url = new URL(request.url);
-  const pathname = decodeURIComponent(url.pathname);
 
   try {
+    const pathname = decodeURIComponent(url.pathname);
+
     if (pathname === "/healthz") {
       if (request.method !== "GET" && request.method !== "HEAD") {
         return new Response("Method not allowed", {

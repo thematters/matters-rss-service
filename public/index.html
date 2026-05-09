@@ -20,7 +20,7 @@
           <span class="brand-name"><strong>訂閱</strong></span>
         </a>
         <nav class="nav" aria-label="外部連結">
-          <a class="cta" href="https://matters.town" rel="noreferrer">回到 Matters →</a>
+          <a class="cta" href="https://matters.town" target="_blank" rel="noopener noreferrer">回到 Matters →</a>
         </nav>
       </div>
     </header>
@@ -74,66 +74,86 @@
           <div class="url-row">
             <div class="url-row__main">
               <span class="result__label">訂閱連結</span>
-              <a class="result__url" id="feed-url" href="#" target="_blank" rel="noreferrer"></a>
+              <a class="result__url" id="feed-url" href="#" target="_blank" rel="noopener noreferrer"></a>
             </div>
             <button class="ds-btn ds-btn--secondary ds-btn--medium" id="copy-button" type="button">
               <span class="btn-symbol" aria-hidden="true">⧉</span>
-              複製
+              <span id="copy-button-label">複製 RSS 連結</span>
             </button>
           </div>
 
-          <div class="result__actions" aria-label="訂閱方式">
-            <a class="ds-btn ds-btn--tertiary ds-btn--medium" id="feedly-link" href="#" target="_blank" rel="noreferrer">
-              <span class="btn-symbol btn-symbol--word" aria-hidden="true">RSS</span>
-              Feedly
+          <div class="recommended-action" aria-label="推薦訂閱方式">
+            <div class="recommended-action__copy">
+              <span class="result__label">推薦方式</span>
+              <h3>用 Email 收作者更新</h3>
+              <ul class="plain-list">
+                <li>按下後會開啟你的 Email app，草稿裡會放入 RSS 連結。</li>
+                <li>寄出後，RSS by email 會處理訂閱；Matters 不會直接寄 newsletter。</li>
+                <li>後續寄送與退訂由 RSS by email 處理，不需要 Matters 密碼或授權帳號。</li>
+              </ul>
+            </div>
+            <a class="ds-btn ds-btn--secondary ds-btn--medium" id="email-link" href="#">
+              <span class="btn-symbol" aria-hidden="true">✉️</span>
+              開啟 Email 草稿
             </a>
-            <a class="ds-btn ds-btn--tertiary ds-btn--medium" id="inoreader-link" href="#" target="_blank" rel="noreferrer">
-              <span class="btn-symbol" aria-hidden="true">I</span>
-              Inoreader
-            </a>
-            <a class="ds-btn ds-btn--tertiary ds-btn--medium" id="email-link" href="#">
-              <span class="btn-symbol" aria-hidden="true">@</span>
-              Email
-            </a>
-            <a class="ds-btn ds-btn--tertiary ds-btn--medium" id="open-feed" href="#" target="_blank" rel="noreferrer">
-              <span class="btn-symbol" aria-hidden="true">↗</span>
-              原始 RSS
-            </a>
+            <p class="fallback-note">如果 Email 沒有正常開啟，請複製 RSS 連結，手動寄到 add@rssby.email。</p>
           </div>
 
-          <div class="follow-options" aria-label="訂閱方式">
-            <div class="follow-option">
-              <span class="follow-option__icon" aria-hidden="true">📖</span>
-              <div class="follow-option__body">
-                <h2 class="follow-option__title">安靜閱讀新文章</h2>
-                <p>Feedly 會先幫你複製訂閱連結；Inoreader、NewsBlur、NetNewsWire 或 Reeder 也可以直接貼上使用。</p>
-              </div>
+          <div class="service-group" aria-label="RSS 閱讀器">
+            <div>
+              <span class="result__label">次要方式</span>
+              <h3>放進 RSS 閱讀器</h3>
+              <p>Feedly 需要登入後貼上連結；Inoreader 會開啟登入或加入頁。NewsBlur、NetNewsWire、Reeder 等閱讀器也可以直接貼上 RSS 連結。</p>
             </div>
-            <div class="follow-option">
-              <span class="follow-option__icon" aria-hidden="true">✉️</span>
-              <div class="follow-option__body">
-                <h2 class="follow-option__title">用 Email 收更新</h2>
-                <p>
-                  點 Email 會開啟草稿；也可以把訂閱連結貼到
-                  <a id="blogtrottr-link" href="https://blogtrottr.com/" target="_blank" rel="noreferrer">Blogtrottr</a>
-                  或
-                  <a id="followit-link" href="https://follow.it/" target="_blank" rel="noreferrer">follow.it</a>
-                  這類 RSS-to-Email 服務。
-                </p>
-              </div>
+            <div class="result__actions">
+              <a class="ds-btn ds-btn--tertiary ds-btn--medium" id="feedly-link" href="#" target="_blank" rel="noopener noreferrer">
+                <span class="btn-symbol btn-symbol--word" aria-hidden="true">RSS</span>
+                Feedly
+              </a>
+              <a class="ds-btn ds-btn--tertiary ds-btn--medium" id="inoreader-link" href="#" target="_blank" rel="noopener noreferrer">
+                <span class="btn-symbol" aria-hidden="true">I</span>
+                Inoreader
+              </a>
+              <a class="ds-btn ds-btn--tertiary ds-btn--medium" id="open-feed" href="#" target="_blank" rel="noopener noreferrer">
+                <span class="btn-symbol" aria-hidden="true">↗</span>
+                原始 RSS
+              </a>
             </div>
-            <div class="follow-option">
-              <span class="follow-option__icon" aria-hidden="true">🔗</span>
-              <div class="follow-option__body">
-                <h2 class="follow-option__title">丟到 Telegram 或自動化流程</h2>
-                <p>
-                  先複製訂閱連結，再用
-                  <a id="telegram-link" href="https://ifttt.com/applets/maxWVgiq-send-new-rss-feed-items-to-telegram" target="_blank" rel="noreferrer">IFTTT RSS to Telegram</a>
-                  接收新文章通知。
-                </p>
-              </div>
-            </div>
+            <p class="fallback-note">如果沒有正常開啟，請複製 RSS 連結，再手動貼到服務裡。</p>
           </div>
+
+          <details class="advanced" id="advanced-tools">
+            <summary>
+              <span>進階：其他服務與驗證</span>
+              <span class="advanced__toggle" aria-hidden="true">
+                <span class="advanced__toggle-closed">展開</span>
+                <span class="advanced__toggle-open">收合</span>
+                <span class="advanced__toggle-icon">⌄</span>
+              </span>
+            </summary>
+            <div class="advanced-actions">
+              <a class="ds-btn ds-btn--tertiary ds-btn--medium" id="blogtrottr-link" href="https://blogtrottr.com/" target="_blank" rel="noopener noreferrer">
+                <span class="btn-symbol" aria-hidden="true">✉️</span>
+                Blogtrottr
+              </a>
+              <a class="ds-btn ds-btn--tertiary ds-btn--medium" id="ifttt-telegram-link" href="https://ifttt.com/applets/maxWVgiq-send-new-rss-feed-items-to-telegram" target="_blank" rel="noopener noreferrer">
+                <span class="btn-symbol" aria-hidden="true">🔗</span>
+                IFTTT / Telegram
+              </a>
+              <a class="ds-btn ds-btn--tertiary ds-btn--medium" id="validator-link" href="https://validator.w3.org/feed/" target="_blank" rel="noopener noreferrer">
+                <span class="btn-symbol" aria-hidden="true">✓</span>
+                W3C 驗證
+              </a>
+            </div>
+            <div class="lesson-box">
+              <span class="lesson-box__icon" aria-hidden="true">💡</span>
+              <div>
+                <h3>這些服務需要自己設定</h3>
+                <p>Blogtrottr 會要求輸入 Email 並完成它自己的驗證。IFTTT / Telegram 需要登入 IFTTT 並選擇要推送的聊天室。</p>
+                <p class="microcopy">如果沒有正常開啟，請複製 RSS 連結，再手動貼到服務裡。</p>
+              </div>
+            </div>
+          </details>
 
           <details class="advanced" id="advanced-websub">
             <summary>
@@ -153,7 +173,7 @@
                 </p>
                 <p class="microcopy">
                   你不需要手動設定。工具支援時會自己使用；不支援時，這條 RSS 連結照樣可以訂閱。
-                  <a href="https://www.w3.org/TR/websub/" target="_blank" rel="noreferrer">查看 WebSub 標準</a>
+                  <a href="https://www.w3.org/TR/websub/" target="_blank" rel="noopener noreferrer">查看 WebSub 標準</a>
                 </p>
               </div>
             </div>

@@ -7,6 +7,7 @@ Live service: `https://rss.matters.town/`
 ## What it does
 
 - Serves public author feeds at `/@{userName}.xml`
+- Accepts both `/@{userName}.xml` and `/%40{userName}.xml`
 - Provides a reader-friendly service page for creating stable author subscription links
 - Offers simple next steps for RSS readers, email updates, and Telegram automation
 - Exposes a WebSub hub at `/websub/hub` for tools that support near-real-time updates
@@ -39,11 +40,14 @@ Then open:
 - `http://localhost:8788/@hi176.xml`
 - `http://localhost:8788/api/preview?user=hi176`
 
-## Smoke test
+## Tests
 
 ```bash
-node scripts/smoke-test.mjs
+npm test
 ```
+
+`npm test` covers URL generation, external subscription links, `mailto:` generation,
+`/@{userName}.xml`, `/%40{userName}.xml`, RSS content type, and `noindex` filtering.
 
 ## Deploy shape
 
@@ -57,6 +61,25 @@ For public launch, prefer the Worker shape because WebSub needs Cron Triggers:
 - `wrangler.example.jsonc` documents the route, assets binding, D1 binding, and cron schedule.
 
 The production hostname is `rss.matters.town`.
+
+## RSS Reader Compatibility
+
+Cloudflare Browser Integrity Check can block some feed clients before the Worker runs.
+If readers or RSS-to-email services receive `403` with Cloudflare `error code: 1010`,
+add a Cloudflare configuration rule for `rss.matters.town` that disables Browser
+Integrity Check for this hostname or for `*.xml` feed paths only.
+
+Suggested expression:
+
+```text
+(http.host eq "rss.matters.town" and http.request.uri.path matches "^/(%40|@)[A-Za-z0-9_-]+\\.xml$")
+```
+
+Suggested configuration setting:
+
+```json
+{ "bic": false }
+```
 
 ## Design System
 
