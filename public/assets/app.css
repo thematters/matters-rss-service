@@ -313,8 +313,24 @@ input::placeholder {
 
 .channel-shortcuts {
   display: grid;
-  gap: var(--space-sp10, 10px);
   margin-top: calc(var(--space-sp8, 8px) * -1);
+  border: 1px solid var(--color-grey-grey-hover, #eeeeee);
+  border-radius: var(--r-sm);
+  background: var(--c-white);
+}
+
+.channel-shortcuts summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sp12, 12px);
+  padding: var(--space-sp12, 12px) var(--space-sp14, 14px);
+  cursor: pointer;
+  list-style: none;
+}
+
+.channel-shortcuts summary::-webkit-details-marker {
+  display: none;
 }
 
 .channel-shortcuts__title {
@@ -324,10 +340,44 @@ input::placeholder {
   line-height: 22px;
 }
 
+.channel-shortcuts__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sp4, 4px);
+  min-width: 56px;
+  color: var(--c-primary-700);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.channel-shortcuts__toggle-open {
+  display: none;
+}
+
+.channel-shortcuts[open] .channel-shortcuts__toggle-closed {
+  display: none;
+}
+
+.channel-shortcuts[open] .channel-shortcuts__toggle-open {
+  display: inline;
+}
+
+.channel-shortcuts__toggle-icon {
+  line-height: 1;
+  transition: transform 120ms ease;
+}
+
+.channel-shortcuts[open] .channel-shortcuts__toggle-icon {
+  transform: rotate(180deg);
+}
+
 .channel-list {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-sp8, 8px);
+  padding: 0 var(--space-sp14, 14px) var(--space-sp14, 14px);
 }
 
 .channel-chip {

@@ -63,12 +63,19 @@
           只會有公開文章全文，不會有圍爐文章。
         </p>
 
-        <section class="channel-shortcuts" aria-labelledby="channel-shortcuts-title">
-          <p class="channel-shortcuts__title" id="channel-shortcuts-title">此外，也可以訂閱頻道</p>
+        <details class="channel-shortcuts">
+          <summary>
+            <span class="channel-shortcuts__title">此外，也可以訂閱頻道</span>
+            <span class="channel-shortcuts__toggle" aria-hidden="true">
+              <span class="channel-shortcuts__toggle-closed">展開</span>
+              <span class="channel-shortcuts__toggle-open">收合</span>
+              <span class="channel-shortcuts__toggle-icon">⌄</span>
+            </span>
+          </summary>
           <div class="channel-list" id="channel-list" aria-label="Matters 頻道">
             <span class="channel-list__loading">正在載入頻道...</span>
           </div>
-        </section>
+        </details>
 
         <div class="result" id="result" hidden>
           <div class="result__header">
