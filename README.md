@@ -7,6 +7,7 @@ Live service: `https://rss.matters.town/`
 ## What it does
 
 - Serves public author feeds at `/@{userName}.xml`
+- Includes public article HTML in `content:encoded`; paywalled/circle and `noindex` articles are excluded
 - Accepts both `/@{userName}.xml` and `/%40{userName}.xml`
 - Provides a reader-friendly service page for creating stable author subscription links
 - Offers simple next steps for RSS readers, email updates, and Telegram automation
@@ -47,7 +48,8 @@ npm test
 ```
 
 `npm test` covers URL generation, external subscription links, `mailto:` generation,
-`/@{userName}.xml`, `/%40{userName}.xml`, RSS content type, and `noindex` filtering.
+`/@{userName}.xml`, `/%40{userName}.xml`, RSS content type, full-content output,
+and `noindex` / paywall filtering.
 
 ## Deploy shape
 

@@ -49,6 +49,8 @@ assert.match(rss.response.headers.get("link") || "", /rel="hub"/);
 assert.match(rss.body, /<rss version="2.0"/);
 assert.match(rss.body, /<channel>/);
 assert.match(rss.body, /rel="hub"/);
+assert.match(rss.body, /xmlns:content="http:\/\/purl\.org\/rss\/1\.0\/modules\/content\/"/);
+assert.match(rss.body, /<content:encoded><!\[CDATA\[/);
 assert.match(rss.body, /https:\/\/matters\.town\/a\//);
 
 const encodedRss = await text("/%40hi176.xml");

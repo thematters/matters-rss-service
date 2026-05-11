@@ -23,11 +23,15 @@ const AUTHOR_RSS_QUERY = `#graphql
             id
             title
             summary
+            content
             shortHash
             slug
             createdAt
             revisedAt
             noindex
+            access {
+              type
+            }
             tags {
               content
             }
@@ -138,10 +142,11 @@ export async function fetchAuthor(userName, options = {}) {
   const articles = (user.articles?.edges || [])
     .map((edge) => edge?.node)
     .filter(Boolean)
-    .filter((article) => article.shortHash && !article.noindex)
+    .filter((article) => article.shortHash && !article.noindex && isPublicArticle(article))
     .map((article) => ({
       title: article.title || "Untitled",
       summary: article.summary || "",
+      contentHtml: article.content || "",
       shortHash: article.shortHash,
       slug: article.slug || "",
       createdAt: article.createdAt,
@@ -177,6 +182,14 @@ export function escapeXml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
+}
+
+function cdata(value) {
+  return `<![CDATA[${stripInvalidXmlChars(value).replaceAll("]]>", "]]]]><![CDATA[>")}]]>`;
+}
+
+function isPublicArticle(article) {
+  return article.access?.type === "public";
 }
 
 function toRfc822(dateLike) {
@@ -221,6 +234,7 @@ export function buildRssXml({ user, articles }, options = {}) {
         `      <guid isPermaLink="true">${escapeXml(articleUrl)}</guid>`,
         `      <pubDate>${escapeXml(toRfc822(article.createdAt))}</pubDate>`,
         `      <description>${escapeXml(article.summary)}</description>`,
+        `      <content:encoded>${cdata(article.contentHtml || article.summary)}</content:encoded>`,
         categories,
         "    </item>",
       ]
@@ -231,7 +245,7 @@ export function buildRssXml({ user, articles }, options = {}) {
 
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">',
+    '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">',
     "  <channel>",
     `    <title>${escapeXml(channelTitle)}</title>`,
     `    <link>${escapeXml(authorUrl)}</link>`,

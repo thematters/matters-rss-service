@@ -71,11 +71,13 @@ const author = await fetchAuthor("mashbean", {
                     id: "a1",
                     title: "Visible article",
                     summary: "Visible summary",
+                    content: "<p>Visible full content</p>",
                     shortHash: "visiblehash",
                     slug: "",
                     createdAt: "2026-05-08T00:00:00.000Z",
                     revisedAt: "2026-05-08T00:00:00.000Z",
                     noindex: false,
+                    access: { type: "public" },
                     tags: [{ content: "RSS" }],
                   },
                 },
@@ -84,11 +86,28 @@ const author = await fetchAuthor("mashbean", {
                     id: "a2",
                     title: "Noindex article",
                     summary: "Hidden summary",
+                    content: "<p>Hidden noindex content</p>",
                     shortHash: "hiddenhash",
                     slug: "",
                     createdAt: "2026-05-08T00:00:00.000Z",
                     revisedAt: "2026-05-08T00:00:00.000Z",
                     noindex: true,
+                    access: { type: "public" },
+                    tags: [],
+                  },
+                },
+                {
+                  node: {
+                    id: "a4",
+                    title: "Paywalled article",
+                    summary: "Paywalled summary",
+                    content: "<p>Paywalled full content</p>",
+                    shortHash: "paywallhash",
+                    slug: "",
+                    createdAt: "2026-05-08T00:00:00.000Z",
+                    revisedAt: "2026-05-08T00:00:00.000Z",
+                    noindex: false,
+                    access: { type: "paywall" },
                     tags: [],
                   },
                 },
@@ -97,11 +116,13 @@ const author = await fetchAuthor("mashbean", {
                     id: "a3",
                     title: "Missing hash article",
                     summary: "Hidden summary",
+                    content: "<p>Hidden missing hash content</p>",
                     shortHash: "",
                     slug: "",
                     createdAt: "2026-05-08T00:00:00.000Z",
                     revisedAt: "2026-05-08T00:00:00.000Z",
                     noindex: false,
+                    access: { type: "public" },
                     tags: [],
                   },
                 },
@@ -126,7 +147,11 @@ const xml = buildRssXml(author, {
 });
 assert.match(xml, /<rss version="2.0"/);
 assert.match(xml, /Visible article/);
+assert.match(xml, /xmlns:content="http:\/\/purl\.org\/rss\/1\.0\/modules\/content\/"/);
+assert.match(xml, /<content:encoded><!\[CDATA\[<p>Visible full content<\/p>\]\]><\/content:encoded>/);
 assert.doesNotMatch(xml, /Noindex article/);
+assert.doesNotMatch(xml, /Paywalled article/);
+assert.doesNotMatch(xml, /Paywalled full content/);
 assert.doesNotMatch(xml, /Missing hash article/);
 
 console.log("Unit tests passed.");
