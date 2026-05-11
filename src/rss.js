@@ -324,6 +324,7 @@ export async function fetchAuthor(userName, options = {}) {
 export async function fetchChannels(options = {}) {
   const data = await fetchGraphql(CHANNELS_QUERY, {}, options);
   const channels = (data?.channels || [])
+    .filter((channel) => channel?.__typename === "TopicChannel")
     .filter((channel) => channel?.shortHash && channel?.navbarTitle)
     .map((channel) => ({
       type: channel.__typename,

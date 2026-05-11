@@ -8,6 +8,7 @@ import {
   feedUrlFor,
   fetchAuthor,
   fetchChannel,
+  fetchChannels,
   normalizeChannelShortHash as normalizeServerChannelShortHash,
   normalizeUserName as normalizeServerUserName,
 } from "../src/rss.js";
@@ -70,6 +71,39 @@ assert.equal(mailto.protocol, "mailto:");
 assert.equal(mailto.pathname, "add@rssby.email");
 assert.equal(mailto.searchParams.get("subject"), "訂閱 Matters 更新");
 assert.equal(mailto.searchParams.get("body"), encodedFeedUrl);
+
+const channelShortcuts = await fetchChannels({
+  fetch: async () =>
+    new Response(
+      JSON.stringify({
+        data: {
+          channels: [
+            {
+              __typename: "WritingChallenge",
+              shortHash: "wem6xy6u7okv",
+              navbarTitle: "七日書｜我的職場人格",
+            },
+            {
+              __typename: "TopicChannel",
+              shortHash: "nycmlq5d4w8a",
+              navbarTitle: "生活事",
+            },
+          ],
+        },
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }
+    ),
+});
+assert.deepEqual(channelShortcuts.channels, [
+  {
+    type: "TopicChannel",
+    shortHash: "nycmlq5d4w8a",
+    title: "生活事",
+  },
+]);
 
 const author = await fetchAuthor("mashbean", {
   fetch: async () =>
