@@ -203,6 +203,21 @@ const channel = await fetchChannel("nycmlq5d4w8a", {
                 {
                   node: {
                     id: "ca2",
+                    title: "Newer channel article",
+                    summary: "Newer channel summary",
+                    content: "<p>Newer channel full content</p>",
+                    shortHash: "newerchannelhash",
+                    slug: "",
+                    createdAt: "2026-05-09T00:00:00.000Z",
+                    revisedAt: "2026-05-09T00:00:00.000Z",
+                    noindex: false,
+                    access: { type: "public" },
+                    tags: [{ content: "生活" }],
+                  },
+                },
+                {
+                  node: {
+                    id: "ca3",
                     title: "Circle article",
                     summary: "Circle summary",
                     content: "<p>Circle full content</p>",
@@ -228,8 +243,9 @@ const channel = await fetchChannel("nycmlq5d4w8a", {
 });
 
 assert.equal(channel.channel.title, "生活事");
-assert.equal(channel.articles.length, 1);
-assert.equal(channel.articles[0].title, "Channel article");
+assert.equal(channel.articles.length, 2);
+assert.equal(channel.articles[0].title, "Newer channel article");
+assert.equal(channel.articles[1].title, "Channel article");
 
 const channelXml = buildRssXml(channel, {
   feedOrigin: origin,
@@ -237,6 +253,7 @@ const channelXml = buildRssXml(channel, {
 });
 assert.match(channelXml, /生活事 - Matters/);
 assert.match(channelXml, /https:\/\/matters\.town\/c\/nycmlq5d4w8a/);
+assert.match(channelXml, /Newer channel article[\s\S]*Channel article/);
 assert.match(channelXml, /<content:encoded><!\[CDATA\[<p>Channel full content<\/p>\]\]><\/content:encoded>/);
 assert.doesNotMatch(channelXml, /Circle article/);
 assert.doesNotMatch(channelXml, /Circle full content/);

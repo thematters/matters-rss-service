@@ -287,12 +287,18 @@ function articleFromNode(article) {
   };
 }
 
+function articlePublishedTime(article) {
+  const time = new Date(article.createdAt).getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+
 function publicArticlesFromEdges(edges = []) {
   return edges
     .map((edge) => edge?.node)
     .filter(Boolean)
     .filter((article) => article.shortHash && !article.noindex && isPublicArticle(article))
-    .map(articleFromNode);
+    .map(articleFromNode)
+    .sort((a, b) => articlePublishedTime(b) - articlePublishedTime(a));
 }
 
 export async function fetchAuthor(userName, options = {}) {
