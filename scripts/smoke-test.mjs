@@ -81,6 +81,27 @@ assert.ok(Array.isArray(preview.body.articles));
 assert.ok(preview.body.articles.length > 0);
 assert.match(preview.body.feedUrl, /\/@hi176\.xml$/);
 
+const channels = await json("/api/channels");
+assert.equal(channels.response.status, 200);
+assert.ok(Array.isArray(channels.body.channels));
+assert.ok(channels.body.channels.length > 0);
+const channel = channels.body.channels.find((item) => item.shortHash && item.title);
+assert.ok(channel);
+
+const channelPreview = await json(`/api/preview?channel=${encodeURIComponent(channel.shortHash)}`);
+assert.equal(channelPreview.response.status, 200);
+assert.equal(channelPreview.body.channel.shortHash, channel.shortHash);
+assert.ok(Array.isArray(channelPreview.body.articles));
+assert.match(channelPreview.body.feedUrl, new RegExp(`/channel/${channel.shortHash}\\.xml$`));
+
+const channelRss = await text(`/channel/${channel.shortHash}.xml`);
+assert.equal(channelRss.response.status, 200);
+assert.match(channelRss.response.headers.get("content-type") || "", /application\/rss\+xml; charset=utf-8/);
+assert.match(channelRss.response.headers.get("link") || "", new RegExp(`/channel/${channel.shortHash}\\.xml`));
+assert.match(channelRss.body, /<rss version="2.0"/);
+assert.match(channelRss.body, /xmlns:content="http:\/\/purl\.org\/rss\/1\.0\/modules\/content\/"/);
+assert.match(channelRss.body, /<content:encoded><!\[CDATA\[/);
+
 const invalid = await json("/api/preview?user=bad!");
 assert.equal(invalid.response.status, 400);
 
@@ -103,10 +124,32 @@ const subscribed = await routeRequest(new Request(`${origin}/websub/hub`, {
 });
 assert.equal(subscribed.status, 202);
 
+const channelForm = new FormData();
+channelForm.set("hub.mode", "subscribe");
+channelForm.set("hub.topic", `${origin}/channel/${channel.shortHash}.xml`);
+channelForm.set("hub.callback", "https://subscriber.example/channel-callback");
+channelForm.set("hub.verify", "sync");
+const subscribedChannel = await routeRequest(new Request(`${origin}/websub/hub`, {
+  method: "POST",
+  body: channelForm,
+}), {
+  env,
+  storage,
+  fetch: fetchWithCallbackVerification,
+  webSubHubUrl: (requestOrigin) => hubUrlFor(requestOrigin, env),
+});
+assert.equal(subscribedChannel.status, 202);
+
 const webSubStatus = await json("/api/websub/status?user=hi176");
 assert.equal(webSubStatus.response.status, 200);
 assert.equal(webSubStatus.body.enabled, true);
 assert.equal(webSubStatus.body.subscriberCount, 1);
 assert.match(webSubStatus.body.hubUrl, /\/websub\/hub$/);
+
+const channelWebSubStatus = await json(`/api/websub/status?channel=${encodeURIComponent(channel.shortHash)}`);
+assert.equal(channelWebSubStatus.response.status, 200);
+assert.equal(channelWebSubStatus.body.enabled, true);
+assert.equal(channelWebSubStatus.body.subscriberCount, 1);
+assert.match(channelWebSubStatus.body.topic, new RegExp(`/channel/${channel.shortHash}\\.xml$`));
 
 console.log("Smoke tests passed.");

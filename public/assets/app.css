@@ -311,6 +311,56 @@ input::placeholder {
   color: var(--color-function-positive, #5c9969);
 }
 
+.channel-shortcuts {
+  display: grid;
+  gap: var(--space-sp10, 10px);
+  margin-top: calc(var(--space-sp8, 8px) * -1);
+}
+
+.channel-shortcuts__title {
+  margin: 0;
+  color: var(--c-grey-darker);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.channel-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sp8, 8px);
+}
+
+.channel-chip {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid var(--c-grey-light);
+  border-radius: 999px;
+  background: var(--c-white);
+  color: var(--c-black);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.channel-chip:hover,
+.channel-chip:focus-visible {
+  border-color: var(--c-primary);
+  background: var(--c-primary-0);
+  color: var(--c-primary-700);
+  outline: none;
+}
+
+.channel-list__loading {
+  color: var(--c-grey-darker);
+  font-size: 14px;
+  line-height: 22px;
+}
+
 .result {
   display: grid;
   gap: var(--space-sp16);

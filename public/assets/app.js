@@ -1,5 +1,6 @@
 import {
   blogtrottrUrlFor,
+  channelFeedUrlFor,
   displayFeedUrlFor,
   encodedFeedUrlFor,
   feedlyUrlFor,
@@ -13,6 +14,7 @@ import {
 
 const form = document.querySelector("#feed-form");
 const input = document.querySelector("#author-input");
+const channelList = document.querySelector("#channel-list");
 const statusMessage = document.querySelector("#status-message");
 const result = document.querySelector("#result");
 const resultTitle = document.querySelector("#result-title");
@@ -48,6 +50,9 @@ function friendlyErrorMessage(error) {
   const message = error instanceof Error ? error.message : String(error || "");
   if (message === "Matters author not found.") {
     return "找不到這位 Matters 作者，請確認帳號是否正確。";
+  }
+  if (message === "Matters channel not found.") {
+    return "找不到這個 Matters 頻道，請稍後再試。";
   }
   if (message.startsWith("Matters API returned") || message === "Matters API error.") {
     return "暫時無法連上 Matters，請稍後再試。";
@@ -105,7 +110,9 @@ function clearPreview() {
 
 function renderPreview(payload) {
   preview.hidden = false;
-  previewAuthor.textContent = `@${payload.user.userName}`;
+  previewAuthor.textContent = payload.channel
+    ? `#${payload.channel.title}`
+    : `@${payload.user.userName}`;
   articleList.replaceChildren();
 
   if (!payload.articles.length) {
@@ -157,20 +164,28 @@ function renderPreview(payload) {
   }
 }
 
-async function loadPreview(userName) {
-  const response = await fetch(`/api/preview?user=${encodeURIComponent(userName)}`, {
+async function loadPreview(source) {
+  const query =
+    source.type === "channel"
+      ? `channel=${encodeURIComponent(source.value)}`
+      : `user=${encodeURIComponent(source.value)}`;
+  const response = await fetch(`/api/preview?${query}`, {
     headers: { accept: "application/json" },
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(payload.error || "讀取作者公開文章失敗。");
+    throw new Error(payload.error || "讀取公開文章失敗。");
   }
   renderPreview(payload);
   return payload;
 }
 
-async function loadWebSubStatus(userName) {
-  const response = await fetch(`/api/websub/status?user=${encodeURIComponent(userName)}`, {
+async function loadWebSubStatus(source) {
+  const query =
+    source.type === "channel"
+      ? `channel=${encodeURIComponent(source.value)}`
+      : `user=${encodeURIComponent(source.value)}`;
+  const response = await fetch(`/api/websub/status?${query}`, {
     headers: { accept: "application/json" },
   });
   if (!response.ok) {
@@ -181,31 +196,29 @@ async function loadWebSubStatus(userName) {
   webSubHub.textContent = status.hubUrl ? publicServiceUrl(status.hubUrl) : "-";
 }
 
-async function handleSubmit(event) {
-  event.preventDefault();
+async function createSubscription(source) {
   clearPreview();
   result.hidden = true;
 
-  let userName;
-  try {
-    userName = normalizeUserName(input.value);
-  } catch (error) {
-    result.hidden = true;
-    setStatus(error.message, "error");
-    input.focus();
-    return;
-  }
-
-  setStatus("正在確認作者公開文章...");
+  setStatus(source.type === "channel" ? "正在確認頻道公開文章..." : "正在確認作者公開文章...");
 
   try {
-    const payload = await loadPreview(userName);
-    const canonicalUserName = payload.user.userName || userName;
+    const payload = await loadPreview(source);
     const origin = feedOrigin();
-    const url = encodedFeedUrlFor(origin, canonicalUserName);
-    const displayUrl = displayFeedUrlFor(origin, canonicalUserName);
+    const isChannel = source.type === "channel";
+    const canonicalValue = isChannel
+      ? payload.channel.shortHash
+      : payload.user.userName || source.value;
+    const url = isChannel
+      ? channelFeedUrlFor(origin, canonicalValue)
+      : encodedFeedUrlFor(origin, canonicalValue);
+    const displayUrl = isChannel
+      ? channelFeedUrlFor(origin, canonicalValue)
+      : displayFeedUrlFor(origin, canonicalValue);
 
-    resultTitle.textContent = `把 @${canonicalUserName} 加入你的資訊流`;
+    resultTitle.textContent = isChannel
+      ? `把「${payload.channel.title}」加入你的資訊流`
+      : `把 @${canonicalValue} 加入你的資訊流`;
     feedUrl.href = url;
     feedUrl.textContent = displayUrl;
     openFeed.href = url;
@@ -220,7 +233,7 @@ async function handleSubmit(event) {
     webSubHub.textContent = "確認中";
     result.hidden = false;
 
-    loadWebSubStatus(userName).catch(() => {
+    loadWebSubStatus({ type: source.type, value: canonicalValue }).catch(() => {
       webSubHub.textContent = "暫時無法確認";
     });
     setStatus("訂閱連結已建立。", "success");
@@ -229,6 +242,22 @@ async function handleSubmit(event) {
     clearPreview();
     setStatus(friendlyErrorMessage(error), "error");
   }
+}
+
+async function handleSubmit(event) {
+  event.preventDefault();
+
+  let userName;
+  try {
+    userName = normalizeUserName(input.value);
+  } catch (error) {
+    result.hidden = true;
+    setStatus(error.message, "error");
+    input.focus();
+    return;
+  }
+
+  await createSubscription({ type: "author", value: userName });
 }
 
 async function copyText(text, successMessage = "訂閱連結已複製。") {
@@ -291,9 +320,62 @@ function openFeedly() {
   copyText(url, "RSS 連結已複製。Feedly 開啟後，請貼到搜尋欄。");
 }
 
+function renderChannels(channels) {
+  channelList.replaceChildren();
+  if (!channels.length) {
+    const empty = document.createElement("span");
+    empty.className = "channel-list__loading";
+    empty.textContent = "目前沒有可訂閱的頻道。";
+    channelList.append(empty);
+    return;
+  }
+
+  for (const channel of channels) {
+    const button = document.createElement("button");
+    button.className = "channel-chip";
+    button.type = "button";
+    button.textContent = channel.title;
+    button.dataset.shortHash = channel.shortHash;
+    button.setAttribute("aria-label", `訂閱 ${channel.title} 頻道`);
+    channelList.append(button);
+  }
+}
+
+async function loadChannels() {
+  try {
+    const response = await fetch("/api/channels", {
+      headers: { accept: "application/json" },
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.error || "頻道載入失敗。");
+    }
+    renderChannels(payload.channels || []);
+  } catch {
+    channelList.replaceChildren();
+    const fallback = document.createElement("span");
+    fallback.className = "channel-list__loading";
+    fallback.textContent = "頻道暫時無法載入。";
+    channelList.append(fallback);
+  }
+}
+
+function handleChannelClick(event) {
+  const button = event.target.closest(".channel-chip");
+  if (!button?.dataset.shortHash) {
+    return;
+  }
+  createSubscription({ type: "channel", value: button.dataset.shortHash });
+}
+
 function hydrateFromQuery() {
   const params = new URLSearchParams(window.location.search);
   const user = params.get("user");
+  const channel = params.get("channel");
+  if (channel) {
+    createSubscription({ type: "channel", value: channel });
+    return;
+  }
   if (user) {
     input.value = user;
     form.requestSubmit();
@@ -303,4 +385,6 @@ function hydrateFromQuery() {
 form.addEventListener("submit", handleSubmit);
 copyButton.addEventListener("click", copyFeedUrl);
 feedlyLink.addEventListener("click", openFeedly);
+channelList.addEventListener("click", handleChannelClick);
+loadChannels();
 hydrateFromQuery();

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Standalone public RSS service for Matters authors.",
+  "description": "Standalone public RSS service for Matters authors and channels.",
   "scripts": {
     "dev": "node scripts/dev-server.mjs",
     "smoke": "node scripts/smoke-test.mjs",

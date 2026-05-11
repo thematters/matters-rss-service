@@ -1,6 +1,7 @@
 const DEFAULT_API_URL = "https://server.matters.town/graphql";
 const DEFAULT_SITE_ORIGIN = "https://matters.town";
 const USERNAME_RE = /^[A-Za-z0-9_-]{1,64}$/;
+const CHANNEL_HASH_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
 export const RSS_CACHE_CONTROL =
   "public, max-age=0, s-maxage=900, stale-while-revalidate=86400";
@@ -38,6 +39,88 @@ const AUTHOR_RSS_QUERY = `#graphql
           }
         }
       }
+    }
+  }
+`;
+
+const CHANNELS_QUERY = `#graphql
+  query PublicChannels {
+    channels {
+      __typename
+      id
+      shortHash
+      navbarTitle
+    }
+  }
+`;
+
+const CHANNEL_RSS_QUERY = `#graphql
+  query PublicChannelRss($shortHash: String!) {
+    channel(input: { shortHash: $shortHash }) {
+      __typename
+      id
+      shortHash
+      navbarTitle
+      ... on Tag {
+        content
+        tagArticles: articles(input: { first: 50 }) {
+          edges {
+            node {
+              ...RssArticleFields
+            }
+          }
+        }
+      }
+      ... on TopicChannel {
+        name
+        channelArticles: articles(input: { first: 50 }) {
+          edges {
+            node {
+              ...RssArticleFields
+            }
+          }
+        }
+      }
+      ... on CurationChannel {
+        name
+        channelArticles: articles(input: { first: 50 }) {
+          edges {
+            node {
+              ...RssArticleFields
+            }
+          }
+        }
+      }
+      ... on WritingChallenge {
+        name
+        description
+        cover
+        campaignArticles: articles(input: { first: 50 }) {
+          edges {
+            node {
+              ...RssArticleFields
+            }
+          }
+        }
+      }
+    }
+  }
+
+  fragment RssArticleFields on Article {
+    id
+    title
+    summary
+    content
+    shortHash
+    slug
+    createdAt
+    revisedAt
+    noindex
+    access {
+      type
+    }
+    tags {
+      content
     }
   }
 `;
@@ -91,12 +174,56 @@ export function normalizeUserName(input) {
   return value;
 }
 
+export function normalizeChannelShortHash(input) {
+  if (typeof input !== "string") {
+    throw new HttpError(400, "Missing Matters channel.");
+  }
+
+  let value = input.trim();
+  if (!value) {
+    throw new HttpError(400, "Missing Matters channel.");
+  }
+
+  if (/^https?:\/\//i.test(value)) {
+    let url;
+    try {
+      url = new URL(value);
+    } catch {
+      throw new HttpError(400, "Invalid Matters channel URL.");
+    }
+    const parts = url.pathname.split("/").filter(Boolean);
+    const channelIndex = parts.findIndex((part) => ["c", "channel"].includes(part));
+    value = channelIndex >= 0 ? parts[channelIndex + 1] || "" : parts.at(-1) || "";
+  }
+
+  value = value.replace(/^\/+/, "");
+  value = value.replace(/^rss\//, "");
+  value = value.replace(/^channel\//, "");
+  value = value.replace(/^c\//, "");
+  value = value.replace(/\.xml$/i, "");
+  value = value.replace(/\/+$/, "");
+
+  if (!CHANNEL_HASH_RE.test(value)) {
+    throw new HttpError(400, "Invalid Matters channel.");
+  }
+
+  return value;
+}
+
 export function feedPathFor(userName) {
   return `/@${normalizeUserName(userName)}.xml`;
 }
 
 export function feedUrlFor(origin, userName) {
   return `${origin.replace(/\/+$/, "")}${feedPathFor(userName)}`;
+}
+
+export function channelFeedPathFor(shortHash) {
+  return `/channel/${normalizeChannelShortHash(shortHash)}.xml`;
+}
+
+export function channelFeedUrlFor(origin, shortHash) {
+  return `${origin.replace(/\/+$/, "")}${channelFeedPathFor(shortHash)}`;
 }
 
 function feedUrlFromRequest(requestUrl, userName) {
@@ -109,7 +236,17 @@ function feedUrlFromRequest(requestUrl, userName) {
   return feedUrlFor(url.origin, userName);
 }
 
-export async function fetchAuthor(userName, options = {}) {
+function channelFeedUrlFromRequest(requestUrl, shortHash) {
+  const url = new URL(requestUrl);
+  const decodedPathname = decodeURIComponent(url.pathname);
+  const expectedPathname = channelFeedPathFor(shortHash);
+  if (decodedPathname === expectedPathname || decodedPathname === `/rss${expectedPathname}`) {
+    return `${url.origin}${url.pathname}`;
+  }
+  return channelFeedUrlFor(url.origin, shortHash);
+}
+
+async function fetchGraphql(query, variables, options = {}) {
   const apiUrl = options.apiUrl || DEFAULT_API_URL;
   const fetchImpl = options.fetch || fetch;
   const response = await fetchImpl(apiUrl, {
@@ -119,10 +256,7 @@ export async function fetchAuthor(userName, options = {}) {
       accept: "application/json",
       "user-agent": "matters-rss-service/0.1",
     },
-    body: JSON.stringify({
-      query: AUTHOR_RSS_QUERY,
-      variables: { userName },
-    }),
+    body: JSON.stringify({ query, variables }),
   });
 
   if (!response.ok) {
@@ -134,28 +268,41 @@ export async function fetchAuthor(userName, options = {}) {
     throw new HttpError(502, payload.errors[0]?.message || "Matters API error.");
   }
 
-  const user = payload.data?.user;
+  return payload.data;
+}
+
+function articleFromNode(article) {
+  return {
+    title: article.title || "Untitled",
+    summary: article.summary || "",
+    contentHtml: article.content || "",
+    shortHash: article.shortHash,
+    slug: article.slug || "",
+    createdAt: article.createdAt,
+    revisedAt: article.revisedAt,
+    tags: (article.tags || [])
+      .map((tag) => tag?.content)
+      .filter((tag) => typeof tag === "string" && tag.trim())
+      .map((tag) => tag.trim()),
+  };
+}
+
+function publicArticlesFromEdges(edges = []) {
+  return edges
+    .map((edge) => edge?.node)
+    .filter(Boolean)
+    .filter((article) => article.shortHash && !article.noindex && isPublicArticle(article))
+    .map(articleFromNode);
+}
+
+export async function fetchAuthor(userName, options = {}) {
+  const data = await fetchGraphql(AUTHOR_RSS_QUERY, { userName }, options);
+  const user = data?.user;
   if (!user) {
     throw new HttpError(404, "Matters author not found.");
   }
 
-  const articles = (user.articles?.edges || [])
-    .map((edge) => edge?.node)
-    .filter(Boolean)
-    .filter((article) => article.shortHash && !article.noindex && isPublicArticle(article))
-    .map((article) => ({
-      title: article.title || "Untitled",
-      summary: article.summary || "",
-      contentHtml: article.content || "",
-      shortHash: article.shortHash,
-      slug: article.slug || "",
-      createdAt: article.createdAt,
-      revisedAt: article.revisedAt,
-      tags: (article.tags || [])
-        .map((tag) => tag?.content)
-        .filter((tag) => typeof tag === "string" && tag.trim())
-        .map((tag) => tag.trim()),
-    }));
+  const articles = publicArticlesFromEdges(user.articles?.edges || []);
 
   return {
     user: {
@@ -165,6 +312,52 @@ export async function fetchAuthor(userName, options = {}) {
       description: user.info?.description || "",
     },
     articles,
+  };
+}
+
+export async function fetchChannels(options = {}) {
+  const data = await fetchGraphql(CHANNELS_QUERY, {}, options);
+  const channels = (data?.channels || [])
+    .filter((channel) => channel?.shortHash && channel?.navbarTitle)
+    .map((channel) => ({
+      type: channel.__typename,
+      shortHash: channel.shortHash,
+      title: channel.navbarTitle,
+    }));
+
+  return { channels };
+}
+
+function channelArticleEdges(channel) {
+  return (
+    channel?.channelArticles?.edges ||
+    channel?.tagArticles?.edges ||
+    channel?.campaignArticles?.edges ||
+    []
+  );
+}
+
+export async function fetchChannel(shortHash, options = {}) {
+  const normalized = normalizeChannelShortHash(shortHash);
+  const data = await fetchGraphql(CHANNEL_RSS_QUERY, { shortHash: normalized }, options);
+  const channel = data?.channel;
+  if (!channel) {
+    throw new HttpError(404, "Matters channel not found.");
+  }
+
+  const title = channel.navbarTitle || channel.name || channel.content || "Matters 頻道";
+  const description =
+    channel.description || `Matters「${title}」頻道的公開文章。`;
+
+  return {
+    channel: {
+      type: channel.__typename,
+      shortHash: channel.shortHash,
+      title,
+      description,
+      cover: channel.cover || "",
+    },
+    articles: publicArticlesFromEdges(channelArticleEdges(channel)),
   };
 }
 
@@ -210,15 +403,26 @@ function latestDate(articles) {
   return dates[0] || new Date();
 }
 
-export function buildRssXml({ user, articles }, options = {}) {
+export function buildRssXml({ user, channel, articles }, options = {}) {
   const siteOrigin = options.siteOrigin || DEFAULT_SITE_ORIGIN;
   const feedOrigin = options.feedOrigin || options.origin || "";
-  const feedUrl = options.feedUrl || (feedOrigin ? feedUrlFor(feedOrigin, user.userName) : "");
+  const isChannel = Boolean(channel);
+  const feedUrl = options.feedUrl || (feedOrigin
+    ? isChannel
+      ? channelFeedUrlFor(feedOrigin, channel.shortHash)
+      : feedUrlFor(feedOrigin, user.userName)
+    : "");
   const webSubHubUrl = options.webSubHubUrl || "";
-  const authorUrl = `${siteOrigin}/@${encodeURIComponent(user.userName)}`;
-  const channelTitle = `${user.displayName} (@${user.userName}) - Matters`;
-  const channelDescription =
-    user.description || `Public Matters articles by ${user.displayName}.`;
+  const sourceUrl = isChannel
+    ? `${siteOrigin}/c/${encodeURIComponent(channel.shortHash)}`
+    : `${siteOrigin}/@${encodeURIComponent(user.userName)}`;
+  const channelTitle = isChannel
+    ? `${channel.title} - Matters`
+    : `${user.displayName} (@${user.userName}) - Matters`;
+  const channelDescription = isChannel
+    ? channel.description
+    : user.description || `Public Matters articles by ${user.displayName}.`;
+  const imageUrl = isChannel ? channel.cover : user.avatar;
 
   const items = articles
     .map((article) => {
@@ -248,7 +452,7 @@ export function buildRssXml({ user, articles }, options = {}) {
     '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">',
     "  <channel>",
     `    <title>${escapeXml(channelTitle)}</title>`,
-    `    <link>${escapeXml(authorUrl)}</link>`,
+    `    <link>${escapeXml(sourceUrl)}</link>`,
     `    <description>${escapeXml(channelDescription)}</description>`,
     "    <language>zh-Hant</language>",
     `    <lastBuildDate>${escapeXml(latestDate(articles).toUTCString())}</lastBuildDate>`,
@@ -257,7 +461,7 @@ export function buildRssXml({ user, articles }, options = {}) {
       ? `    <atom:link href="${escapeXml(feedUrl)}" rel="self" type="application/rss+xml" />`
       : "",
     webSubHubUrl ? `    <atom:link href="${escapeXml(webSubHubUrl)}" rel="hub" />` : "",
-    user.avatar ? `    <image><url>${escapeXml(user.avatar)}</url><title>${escapeXml(channelTitle)}</title><link>${escapeXml(authorUrl)}</link></image>` : "",
+    imageUrl ? `    <image><url>${escapeXml(imageUrl)}</url><title>${escapeXml(channelTitle)}</title><link>${escapeXml(sourceUrl)}</link></image>` : "",
     items,
     "  </channel>",
     "</rss>",
@@ -267,12 +471,19 @@ export function buildRssXml({ user, articles }, options = {}) {
     .join("\n");
 }
 
-export function buildPreviewJson({ user, articles }, options = {}) {
+export function buildPreviewJson({ user, channel, articles }, options = {}) {
   const siteOrigin = options.siteOrigin || DEFAULT_SITE_ORIGIN;
   const feedOrigin = options.feedOrigin || options.origin || "";
   return {
     user,
-    feedUrl: feedOrigin ? feedUrlFor(feedOrigin, user.userName) : feedPathFor(user.userName),
+    channel,
+    feedUrl: feedOrigin
+      ? channel
+        ? channelFeedUrlFor(feedOrigin, channel.shortHash)
+        : feedUrlFor(feedOrigin, user.userName)
+      : channel
+        ? channelFeedPathFor(channel.shortHash)
+        : feedPathFor(user.userName),
     articles: articles.slice(0, 3).map((article) => ({
       title: article.title,
       summary: article.summary,
@@ -316,6 +527,39 @@ export async function createRssResponse(userName, requestUrl, options = {}) {
   });
 }
 
+export async function createChannelRssResponse(shortHash, requestUrl, options = {}) {
+  const normalized = normalizeChannelShortHash(shortHash);
+  const origin = new URL(requestUrl).origin;
+  const webSubHubUrl =
+    typeof options.webSubHubUrl === "function"
+      ? options.webSubHubUrl(origin)
+      : options.webSubHubUrl;
+  const feedUrl = options.feedUrl || channelFeedUrlFromRequest(requestUrl, normalized);
+  const data = await fetchChannel(normalized, options);
+  const xml = buildRssXml(data, {
+    origin,
+    feedOrigin: options.feedOrigin || origin,
+    feedUrl,
+    siteOrigin: options.siteOrigin || DEFAULT_SITE_ORIGIN,
+    webSubHubUrl,
+  });
+
+  const linkHeader = [
+    `<${feedUrl}>; rel="self"; type="application/rss+xml"`,
+    webSubHubUrl ? `<${webSubHubUrl}>; rel="hub"` : "",
+  ].filter(Boolean).join(", ");
+
+  return new Response(xml, {
+    status: 200,
+    headers: {
+      "content-type": "application/rss+xml; charset=utf-8",
+      "cache-control": RSS_CACHE_CONTROL,
+      "cdn-cache-control": CDN_CACHE_CONTROL,
+      ...(linkHeader ? { link: linkHeader } : {}),
+    },
+  });
+}
+
 export async function createPreviewResponse(userName, requestUrl, options = {}) {
   const normalized = normalizeUserName(userName);
   const origin = new URL(requestUrl).origin;
@@ -328,6 +572,40 @@ export async function createPreviewResponse(userName, requestUrl, options = {}) 
     })
   );
 
+  return new Response(body, {
+    status: 200,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": RSS_CACHE_CONTROL,
+      "cdn-cache-control": CDN_CACHE_CONTROL,
+    },
+  });
+}
+
+export async function createChannelPreviewResponse(shortHash, requestUrl, options = {}) {
+  const normalized = normalizeChannelShortHash(shortHash);
+  const origin = new URL(requestUrl).origin;
+  const data = await fetchChannel(normalized, options);
+  const body = JSON.stringify(
+    buildPreviewJson(data, {
+      origin,
+      feedOrigin: options.feedOrigin || origin,
+      siteOrigin: options.siteOrigin || DEFAULT_SITE_ORIGIN,
+    })
+  );
+
+  return new Response(body, {
+    status: 200,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": RSS_CACHE_CONTROL,
+      "cdn-cache-control": CDN_CACHE_CONTROL,
+    },
+  });
+}
+
+export async function createChannelsResponse(requestUrl, options = {}) {
+  const body = JSON.stringify(await fetchChannels(options));
   return new Response(body, {
     status: 200,
     headers: {
@@ -407,12 +685,25 @@ export async function routeRequest(request, options = {}) {
     }
 
     if (pathname === "/api/preview") {
+      const channel = url.searchParams.get("channel");
+      if (channel) {
+        return await createChannelPreviewResponse(channel, request.url, options);
+      }
       return await createPreviewResponse(url.searchParams.get("user"), request.url, options);
+    }
+
+    if (pathname === "/api/channels") {
+      return await createChannelsResponse(request.url, options);
     }
 
     const rssMatch = pathname.match(/^\/(?:rss\/)?(@[A-Za-z0-9_-]{1,64}\.xml)$/);
     if (rssMatch) {
       return await createRssResponse(rssMatch[1], request.url, options);
+    }
+
+    const channelRssMatch = pathname.match(/^\/(?:rss\/)?channel\/([A-Za-z0-9_-]{1,64}\.xml)$/);
+    if (channelRssMatch) {
+      return await createChannelRssResponse(channelRssMatch[1], request.url, options);
     }
 
     if (typeof options.next === "function") {

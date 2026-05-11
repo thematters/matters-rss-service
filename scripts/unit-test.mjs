@@ -2,18 +2,24 @@ import assert from "node:assert/strict";
 
 import {
   buildRssXml,
+  channelFeedPathFor,
+  channelFeedUrlFor,
   feedPathFor,
   feedUrlFor,
   fetchAuthor,
+  fetchChannel,
+  normalizeChannelShortHash as normalizeServerChannelShortHash,
   normalizeUserName as normalizeServerUserName,
 } from "../src/rss.js";
 import {
   blogtrottrUrlFor,
+  channelFeedUrlFor as browserChannelFeedUrlFor,
   displayFeedUrlFor,
   encodedFeedUrlFor,
   feedlyUrlFor,
   iftttTelegramUrlFor,
   inoreaderUrlFor,
+  normalizeChannelShortHash as normalizeBrowserChannelShortHash,
   normalizeUserName as normalizeBrowserUserName,
   rssByEmailMailtoUrlFor,
   w3cValidatorUrlFor,
@@ -26,11 +32,23 @@ assert.equal(normalizeServerUserName("@mashbean.xml"), "mashbean");
 assert.equal(normalizeServerUserName("%40mashbean.xml"), "mashbean");
 assert.equal(feedPathFor("mashbean"), "/@mashbean.xml");
 assert.equal(feedUrlFor(`${origin}/`, "mashbean"), "https://rss.matters.town/@mashbean.xml");
+assert.equal(normalizeServerChannelShortHash("/channel/nycmlq5d4w8a.xml"), "nycmlq5d4w8a");
+assert.equal(normalizeServerChannelShortHash("https://matters.town/c/nycmlq5d4w8a"), "nycmlq5d4w8a");
+assert.equal(channelFeedPathFor("nycmlq5d4w8a"), "/channel/nycmlq5d4w8a.xml");
+assert.equal(
+  channelFeedUrlFor(`${origin}/`, "nycmlq5d4w8a"),
+  "https://rss.matters.town/channel/nycmlq5d4w8a.xml"
+);
 
 assert.equal(normalizeBrowserUserName("https://matters.town/@mashbean"), "mashbean");
 assert.equal(normalizeBrowserUserName("%40mashbean.xml"), "mashbean");
+assert.equal(normalizeBrowserChannelShortHash("https://matters.town/channel/nycmlq5d4w8a"), "nycmlq5d4w8a");
 assert.equal(encodedFeedUrlFor(origin, "mashbean"), encodedFeedUrl);
 assert.equal(displayFeedUrlFor(origin, "mashbean"), "https://rss.matters.town/@mashbean.xml");
+assert.equal(
+  browserChannelFeedUrlFor(origin, "nycmlq5d4w8a"),
+  "https://rss.matters.town/channel/nycmlq5d4w8a.xml"
+);
 
 assert.equal(feedlyUrlFor(), "https://feedly.com/i/discover");
 assert.equal(
@@ -50,7 +68,7 @@ assert.equal(
 const mailto = new URL(rssByEmailMailtoUrlFor(encodedFeedUrl));
 assert.equal(mailto.protocol, "mailto:");
 assert.equal(mailto.pathname, "add@rssby.email");
-assert.equal(mailto.searchParams.get("subject"), "訂閱 Matters 作者更新");
+assert.equal(mailto.searchParams.get("subject"), "訂閱 Matters 更新");
 assert.equal(mailto.searchParams.get("body"), encodedFeedUrl);
 
 const author = await fetchAuthor("mashbean", {
@@ -153,5 +171,74 @@ assert.doesNotMatch(xml, /Noindex article/);
 assert.doesNotMatch(xml, /Paywalled article/);
 assert.doesNotMatch(xml, /Paywalled full content/);
 assert.doesNotMatch(xml, /Missing hash article/);
+
+const channel = await fetchChannel("nycmlq5d4w8a", {
+  fetch: async () =>
+    new Response(
+      JSON.stringify({
+        data: {
+          channel: {
+            __typename: "TopicChannel",
+            id: "c1",
+            shortHash: "nycmlq5d4w8a",
+            navbarTitle: "生活事",
+            name: "生活事",
+            channelArticles: {
+              edges: [
+                {
+                  node: {
+                    id: "ca1",
+                    title: "Channel article",
+                    summary: "Channel summary",
+                    content: "<p>Channel full content</p>",
+                    shortHash: "channelhash",
+                    slug: "",
+                    createdAt: "2026-05-08T00:00:00.000Z",
+                    revisedAt: "2026-05-08T00:00:00.000Z",
+                    noindex: false,
+                    access: { type: "public" },
+                    tags: [{ content: "生活" }],
+                  },
+                },
+                {
+                  node: {
+                    id: "ca2",
+                    title: "Circle article",
+                    summary: "Circle summary",
+                    content: "<p>Circle full content</p>",
+                    shortHash: "circlehash",
+                    slug: "",
+                    createdAt: "2026-05-08T00:00:00.000Z",
+                    revisedAt: "2026-05-08T00:00:00.000Z",
+                    noindex: false,
+                    access: { type: "circle" },
+                    tags: [],
+                  },
+                },
+              ],
+            },
+          },
+        },
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }
+    ),
+});
+
+assert.equal(channel.channel.title, "生活事");
+assert.equal(channel.articles.length, 1);
+assert.equal(channel.articles[0].title, "Channel article");
+
+const channelXml = buildRssXml(channel, {
+  feedOrigin: origin,
+  siteOrigin: "https://matters.town",
+});
+assert.match(channelXml, /生活事 - Matters/);
+assert.match(channelXml, /https:\/\/matters\.town\/c\/nycmlq5d4w8a/);
+assert.match(channelXml, /<content:encoded><!\[CDATA\[<p>Channel full content<\/p>\]\]><\/content:encoded>/);
+assert.doesNotMatch(channelXml, /Circle article/);
+assert.doesNotMatch(channelXml, /Circle full content/);
 
 console.log("Unit tests passed.");

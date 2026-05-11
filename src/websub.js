@@ -1,9 +1,12 @@
 import {
   buildRssXml,
   CDN_CACHE_CONTROL,
+  channelFeedUrlFor,
+  fetchChannel,
   fetchAuthor,
   feedUrlFor,
   HttpError,
+  normalizeChannelShortHash,
   normalizeUserName,
   RSS_CACHE_CONTROL,
 } from "./rss.js";
@@ -49,21 +52,44 @@ export function canonicalTopicUrl(requestUrl, topic, env = {}) {
     throw new HttpError(400, "Unsupported WebSub topic.");
   }
 
-  const match = decodeURIComponent(parsed.pathname).match(/^\/(?:rss\/)?@([A-Za-z0-9_-]{1,64})\.xml$/);
-  if (!match) {
-    throw new HttpError(400, "WebSub topic must be an author RSS URL.");
+  const parsedTopic = topicFromPathname(parsed.pathname);
+  if (parsedTopic.type === "author") {
+    return feedUrlFor(expectedOrigin, normalizeUserName(parsedTopic.value));
   }
 
-  return feedUrlFor(expectedOrigin, normalizeUserName(match[1]));
+  return channelFeedUrlFor(expectedOrigin, normalizeChannelShortHash(parsedTopic.value));
 }
 
-export function userNameFromTopic(topic) {
+export function topicFromPathname(pathname) {
+  const decoded = decodeURIComponent(pathname);
+  const authorMatch = decoded.match(/^\/(?:rss\/)?@([A-Za-z0-9_-]{1,64})\.xml$/);
+  if (authorMatch) {
+    return { type: "author", value: normalizeUserName(authorMatch[1]) };
+  }
+
+  const channelMatch = decoded.match(/^\/(?:rss\/)?channel\/([A-Za-z0-9_-]{1,64})\.xml$/);
+  if (channelMatch) {
+    return { type: "channel", value: normalizeChannelShortHash(channelMatch[1]) };
+  }
+
+  throw new HttpError(400, "WebSub topic must be an author or channel RSS URL.");
+}
+
+export function feedTopicFromTopicUrl(topic) {
   const url = new URL(topic);
-  const match = decodeURIComponent(url.pathname).match(/^\/(?:rss\/)?@([A-Za-z0-9_-]{1,64})\.xml$/);
-  if (!match) {
+  try {
+    return topicFromPathname(url.pathname);
+  } catch {
     throw new HttpError(400, "Invalid WebSub topic.");
   }
-  return normalizeUserName(match[1]);
+}
+
+async function fetchDataForTopic(topic, options = {}) {
+  const parsedTopic = feedTopicFromTopicUrl(topic);
+  if (parsedTopic.type === "channel") {
+    return await fetchChannel(parsedTopic.value, options);
+  }
+  return await fetchAuthor(parsedTopic.value, options);
 }
 
 function assertCallbackUrl(callback) {
@@ -131,7 +157,7 @@ export async function handleWebSubHub(request, options = {}) {
     return jsonResponse({
       ok: true,
       hub: hubUrlFor(new URL(request.url).origin, env),
-      supportedTopics: "/@{userName}.xml",
+      supportedTopics: ["/@{userName}.xml", "/channel/{shortHash}.xml"],
     });
   }
 
@@ -264,8 +290,7 @@ export async function runWebSubPoll(options = {}) {
     await storage.incrementUsage(date, "checks", 1);
     checked += 1;
 
-    const userName = userNameFromTopic(topic);
-    const data = await fetchAuthor(userName, { ...options, fetch: fetchImpl });
+    const data = await fetchDataForTopic(topic, { ...options, fetch: fetchImpl });
     const latest = data.articles[0];
     if (!latest) {
       continue;
@@ -322,6 +347,7 @@ export async function handleWebSubStatus(request, options = {}) {
   const storage = options.storage;
   const url = new URL(request.url);
   const user = url.searchParams.get("user");
+  const channel = url.searchParams.get("channel");
   const origin = url.origin;
   const usage = storage ? await storage.getUsage(todayKey()) : { checks: 0, deliveries: 0 };
   const limit = dailyDeliveryLimit(env);
@@ -330,6 +356,9 @@ export async function handleWebSubStatus(request, options = {}) {
 
   if (user && storage) {
     topic = feedUrlFor(env.WEBSUB_TOPIC_ORIGIN || origin, normalizeUserName(user));
+    subscriberCount = (await storage.listActiveSubscriptionsByTopic(topic)).length;
+  } else if (channel && storage) {
+    topic = channelFeedUrlFor(env.WEBSUB_TOPIC_ORIGIN || origin, normalizeChannelShortHash(channel));
     subscriberCount = (await storage.listActiveSubscriptionsByTopic(topic)).length;
   }
 

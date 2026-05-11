@@ -1,4 +1,5 @@
 const USERNAME_RE = /^[A-Za-z0-9_-]{1,64}$/;
+const CHANNEL_HASH_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const PUBLIC_FEED_ORIGIN = "https://rss.matters.town";
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
@@ -39,6 +40,38 @@ export function normalizeUserName(rawValue) {
   return value;
 }
 
+export function normalizeChannelShortHash(rawValue) {
+  let value = String(rawValue || "").trim();
+  if (!value) {
+    throw new Error("缺少頻道。");
+  }
+
+  if (/^https?:\/\//i.test(value)) {
+    let parsed;
+    try {
+      parsed = new URL(value);
+    } catch {
+      throw new Error("頻道網址格式不正確。");
+    }
+    const parts = parsed.pathname.split("/").filter(Boolean);
+    const channelIndex = parts.findIndex((part) => ["c", "channel"].includes(part));
+    value = channelIndex >= 0 ? parts[channelIndex + 1] || "" : parts.at(-1) || "";
+  }
+
+  value = value.replace(/^\/+/, "");
+  value = value.replace(/^rss\//, "");
+  value = value.replace(/^channel\//, "");
+  value = value.replace(/^c\//, "");
+  value = value.replace(/\.xml$/i, "");
+  value = value.replace(/\/+$/, "");
+
+  if (!CHANNEL_HASH_RE.test(value)) {
+    throw new Error("頻道格式不正確。");
+  }
+
+  return value;
+}
+
 export function feedOriginForLocation(location) {
   return LOCAL_HOSTS.has(location.hostname) ? PUBLIC_FEED_ORIGIN : location.origin;
 }
@@ -49,6 +82,10 @@ export function encodedFeedUrlFor(origin, userName) {
 
 export function displayFeedUrlFor(origin, userName) {
   return `${origin.replace(/\/+$/, "")}/@${encodeURIComponent(normalizeUserName(userName))}.xml`;
+}
+
+export function channelFeedUrlFor(origin, shortHash) {
+  return `${origin.replace(/\/+$/, "")}/channel/${encodeURIComponent(normalizeChannelShortHash(shortHash))}.xml`;
 }
 
 export function feedlyUrlFor() {
@@ -72,6 +109,6 @@ export function w3cValidatorUrlFor(feedUrl) {
 }
 
 export function rssByEmailMailtoUrlFor(feedUrl) {
-  const subject = "訂閱 Matters 作者更新";
+  const subject = "訂閱 Matters 更新";
   return `mailto:add@rssby.email?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(feedUrl)}`;
 }

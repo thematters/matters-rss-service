@@ -1,15 +1,16 @@
 # Matters RSS Service
 
-Standalone MVP for public Matters author RSS feeds.
+Standalone MVP for public Matters author and channel RSS feeds.
 
 Live service: `https://rss.matters.town/`
 
 ## What it does
 
 - Serves public author feeds at `/@{userName}.xml`
+- Serves public Matters channel feeds at `/channel/{shortHash}.xml`
 - Includes public article HTML in `content:encoded`; paywalled/circle and `noindex` articles are excluded
 - Accepts both `/@{userName}.xml` and `/%40{userName}.xml`
-- Provides a reader-friendly service page for creating stable author subscription links
+- Provides a reader-friendly service page for creating stable author and channel subscription links
 - Offers simple next steps for RSS readers, email updates, and Telegram automation
 - Exposes a WebSub hub at `/websub/hub` for tools that support near-real-time updates
 - Uses public Matters GraphQL data only
@@ -40,6 +41,8 @@ Then open:
 - `http://localhost:8788/`
 - `http://localhost:8788/@hi176.xml`
 - `http://localhost:8788/api/preview?user=hi176`
+- `http://localhost:8788/channel/nycmlq5d4w8a.xml`
+- `http://localhost:8788/api/channels`
 
 ## Tests
 
@@ -49,7 +52,7 @@ npm test
 
 `npm test` covers URL generation, external subscription links, `mailto:` generation,
 `/@{userName}.xml`, `/%40{userName}.xml`, RSS content type, full-content output,
-and `noindex` / paywall filtering.
+`/channel/{shortHash}.xml`, WebSub author/channel topics, and `noindex` / paywall filtering.
 
 ## Deploy shape
 
@@ -74,7 +77,7 @@ Integrity Check for this hostname or for `*.xml` feed paths only.
 Suggested expression:
 
 ```text
-(http.host eq "rss.matters.town" and http.request.uri.path matches "^/(%40|@)[A-Za-z0-9_-]+\\.xml$")
+(http.host eq "rss.matters.town" and http.request.uri.path matches "^/((%40|@)[A-Za-z0-9_-]+|channel/[A-Za-z0-9_-]+)\\.xml$")
 ```
 
 Suggested configuration setting:
