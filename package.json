@@ -1,6 +1,7 @@
 {
   "name": "matters-rss-service",
   "version": "0.1.0",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "description": "Standalone public RSS service for Matters authors and channels.",
